@@ -1,943 +1,971 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Squirrel's Eye View of Central Park</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Sans:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+/* ── TOKENS ─────────────────────────────────────────────── */
 :root{
-  --ivory:#f9f6f1;
-  --cream:#f2ede6;
-  --linen:#e8e1d8;
-  --warm-gray:#c4bdb4;
-  --mid:#8a8278;
-  --dark:#2d2a26;
-  --ink:#1a1816;
-  --border:#ddd8d0;
-  --border2:#c8c2b8;
-  --red:#c94c3a;
-  --red-l:#fdf0ee;
-  --red-m:#f4c4bc;
-  --green:#2d7a4f;
-  --green-l:#edf6f1;
-  --green-m:#a8d9bc;
-  --blue:#2b5fa0;
-  --blue-l:#eef3fb;
-  --blue-m:#a8c2e8;
-  --amber:#b86a12;
-  --amber-l:#fdf4e8;
-  --amber-m:#f2c880;
-  --purple:#6b4fa0;
-  --purple-l:#f3f0fb;
-  --teal:#1a7a72;
-  --teal-l:#edf8f7;
-  --font:"Sora",sans-serif;
-  --mono:"JetBrains Mono",monospace;
+  --paper:#F0E8D5; --paper-d:#E6DBC2; --paper-e:#D8CCAE;
+  --ink:#2B1D0E; --ink-s:#4A3318; --ink-m:#7A6040; --ink-f:#B09878;
+  --rust:#A8421A; --acorn:#7A4A12; --moss:#5A6A2A;
+  --line:rgba(43,29,14,.12); --line-s:rgba(43,29,14,.06);
+  --topbar-h:52px;
+  --banner-h:80px;
+  --sticky-top:calc(var(--topbar-h) + var(--banner-h));
 }
-html,body{height:100%;overflow:hidden;font-family:var(--font);background:var(--ivory);color:var(--ink)}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--paper);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
 
-/* HEADER */
-.hdr{
-  height:52px;display:flex;align-items:center;justify-content:space-between;
-  padding:0 1.2rem;border-bottom:1px solid var(--border);
-  background:#fff;position:relative;z-index:1001;flex-shrink:0;
-}
-.hdr-left{display:flex;align-items:center;gap:1.2rem}
-.logo{display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;font-weight:600;color:var(--ink);letter-spacing:-0.01em}
-.logo-dot{width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0}
-.hdr-title{font-size:0.78rem;color:var(--mid);font-weight:400;border-left:1px solid var(--border);padding-left:1.2rem}
-.tabs{display:flex;gap:0}
-.tab{
-  padding:0 1rem;height:52px;font-size:0.76rem;font-weight:500;
-  color:var(--mid);cursor:pointer;border:none;background:none;
-  font-family:var(--font);border-bottom:2px solid transparent;
-  transition:all .15s;display:flex;align-items:center;gap:0.4rem;
-}
-.tab:hover{color:var(--dark)}
-.tab.on{color:var(--ink);border-bottom-color:var(--ink)}
-.hdr-pills{display:flex;gap:0.4rem}
-.hpill{
-  font-size:0.68rem;font-family:var(--mono);
-  padding:0.2rem 0.55rem;border-radius:2rem;
-  border:1px solid var(--border);color:var(--mid);background:var(--cream);
-}
+/* ── LOADER ───────────────────────────────────────────── */
+#loader{position:fixed;inset:0;background:var(--paper);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;transition:opacity .6s}
+#loader.done{opacity:0;pointer-events:none}
+.loader-sq{font-size:48px;animation:sqb 1s ease-in-out infinite alternate}
+@keyframes sqb{from{transform:translateY(0)}to{transform:translateY(-18px)}}
+.loader-txt{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-m);margin-top:18px}
+.loader-bar{width:160px;height:2px;background:var(--paper-e);margin-top:12px;border-radius:1px;overflow:hidden}
+.loader-fill{height:100%;background:var(--acorn);width:0%;transition:width .4s ease}
 
-/* LAYOUT */
-.app{display:flex;height:calc(100vh - 52px)}
-.panel{display:none;flex:1;overflow:hidden}
-.panel.on{display:flex}
+/* ── PROGRESS BAR ─────────────────────────────────────── */
+#progress{position:fixed;top:0;left:0;height:2px;background:var(--acorn);z-index:300;width:0%;transition:width .1s linear;pointer-events:none}
 
-/* MAP PANEL */
-.map-panel{flex:1;position:relative}
-#map{width:100%;height:100%;z-index:1}
+/* ── TOPBAR ───────────────────────────────────────────── */
+.topbar{
+  position:fixed;top:0;left:0;right:0;z-index:200;height:var(--topbar-h);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 40px;
+  background:rgba(240,232,213,.97);
+  border-bottom:1px solid var(--line);
+  backdrop-filter:blur(6px);
+}
+.brand{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-s);display:flex;align-items:center;gap:10px}
+.brand svg{height:30px;width:auto;flex-shrink:0}
+.topbar nav{display:flex;gap:22px}
+.topbar nav a{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-m);text-decoration:none;transition:color .2s}
+.topbar nav a:hover{color:var(--ink)}
 
-/* LEFT SIDEBAR */
-.sidebar{
-  width:232px;min-width:232px;background:#fff;border-right:1px solid var(--border);
-  display:flex;flex-direction:column;overflow-y:auto;z-index:500;position:relative;
+/* ── CHAPTER BANNER ───────────────────────────────────── */
+.chapter-banner{
+  position:sticky;
+  top:var(--topbar-h);
+  z-index:150;
+  height:var(--banner-h);
+  display:flex;align-items:flex-end;gap:20px;
+  padding:0 60px 16px 60px;
+  background:var(--paper);
+  border-bottom:1px solid var(--line);
+  box-shadow:0 4px 20px rgba(43,29,14,.06);
 }
-.sb-section{padding:1rem;border-bottom:1px solid var(--border)}
-.sb-label{
-  font-size:0.64rem;font-weight:600;text-transform:uppercase;letter-spacing:0.09em;
-  color:var(--warm-gray);margin-bottom:0.65rem;
-}
-.layer-row{
-  display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0;cursor:pointer;
-  font-size:0.75rem;color:var(--mid);transition:color .12s;
-}
-.layer-row:hover{color:var(--dark)}
-.layer-row.on{color:var(--ink)}
-.toggle{
-  width:28px;height:16px;border-radius:8px;border:1px solid var(--border2);
-  background:var(--cream);position:relative;cursor:pointer;flex-shrink:0;transition:all .2s;
-}
-.toggle.on{background:var(--ink);border-color:var(--ink)}
-.toggle::after{
-  content:'';position:absolute;top:2px;left:2px;
-  width:10px;height:10px;border-radius:50%;background:#fff;transition:left .2s;
-}
-.toggle.on::after{left:14px}
-.clr-swatch{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+.cb-num{font-family:"Playfair Display",serif;font-size:clamp(28px,4vw,48px);font-style:italic;font-weight:400;color:var(--acorn);opacity:.28;line-height:1;flex-shrink:0;margin-bottom:2px}
+.cb-title{font-family:"Playfair Display",serif;font-size:clamp(20px,2.4vw,32px);font-weight:600;line-height:1;letter-spacing:-.015em;color:var(--ink);margin-bottom:2px}
+.cb-title em{font-style:italic;color:var(--acorn);font-weight:400}
 
-/* BEHAVIOR BUTTONS */
-.beh-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.3rem}
-.bb{
-  padding:0.35rem 0.4rem;border-radius:5px;border:1px solid var(--border);
-  background:var(--cream);color:var(--mid);font-size:0.7rem;font-family:var(--font);
-  cursor:pointer;transition:all .15s;text-align:center;
+/* ── HERO ─────────────────────────────────────────────── */
+.hero{
+  min-height:100vh;display:grid;grid-template-columns:1.2fr 1fr;
+  align-items:center;gap:80px;padding:calc(var(--topbar-h) + 50px) 80px 80px;
+  max-width:1300px;margin:0 auto;
 }
-.bb:hover{border-color:var(--border2);color:var(--dark)}
-.bb.on{font-weight:500}
+.hero-kicker{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--rust);margin-bottom:22px;display:flex;align-items:center;gap:12px}
+.hero-kicker::before{content:'';width:24px;height:1px;background:var(--rust)}
+.hero h1{font-family:"Playfair Display",serif;font-size:clamp(50px,7vw,90px);line-height:.95;letter-spacing:-.02em;margin-bottom:26px;color:var(--ink)}
+.hero h1 em{font-style:italic;color:var(--acorn);font-weight:400}
+.hero .dek{font-size:17px;line-height:1.65;color:var(--ink-s);max-width:460px;margin-bottom:36px}
+.hero .byline{display:flex;gap:28px;font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-m)}
+.hero .byline b{display:block;color:var(--ink);font-size:11px;margin-top:3px;font-weight:500}
+.hero-viz{display:flex;justify-content:flex-end}
+.hero-viz svg{width:100%;max-width:300px;height:auto;filter:drop-shadow(0 12px 40px rgba(43,29,14,.14))}
+.scroll-cue{position:absolute;bottom:40px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:10px;font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-m)}
+.scroll-line{width:1px;height:38px;background:var(--ink-f);overflow:hidden;position:relative}
+.scroll-line::after{content:'';position:absolute;top:-38px;left:0;width:100%;height:20px;background:var(--ink);animation:sl 2s ease-in-out infinite}
+@keyframes sl{0%{transform:translateY(0)}100%{transform:translateY(76px)}}
+.hero{position:relative}
 
-/* FUR PILLS */
-.fur-row{display:flex;gap:0.3rem;flex-wrap:wrap}
-.fp{
-  padding:0.25rem 0.6rem;border-radius:2rem;border:1px solid var(--border);
-  background:var(--cream);color:var(--mid);font-size:0.7rem;cursor:pointer;transition:all .15s;
-}
-.fp:hover{border-color:var(--border2)}
-.fp.on{border-color:var(--ink);background:var(--ink);color:#fff}
+/* ── CHAPTER MARK ─────────────────────────────────────── */
+.chapter-mark{max-width:1100px;margin:80px auto 40px;padding:0 60px 24px;display:grid;grid-template-columns:120px 1fr;gap:30px;align-items:end;border-bottom:1px solid var(--line)}
+.ch-num{font-family:"Playfair Display",serif;font-size:80px;line-height:.9;color:var(--acorn);font-weight:400;font-style:italic;opacity:.3}
+.ch-label{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-m);margin-bottom:8px}
+.chapter-mark h2{font-family:"Playfair Display",serif;font-size:clamp(28px,3.2vw,42px);font-weight:600;line-height:1;letter-spacing:-.01em;color:var(--ink)}
+.chapter-mark h2 em{font-style:italic;color:var(--acorn);font-weight:400}
 
-/* STAT CARDS */
-.stat-grid{display:flex;flex-direction:column;gap:0.4rem}
-.sc{
-  background:var(--cream);border-radius:6px;padding:0.55rem 0.7rem;
-  border:1px solid var(--border);
-}
-.sc-val{font-size:1.3rem;font-weight:600;font-family:var(--mono);line-height:1}
-.sc-lbl{font-size:0.66rem;color:var(--mid);margin-top:0.2rem}
-
-/* MAP TOOLTIP */
-.leaflet-popup-content-wrapper{
-  border-radius:10px!important;box-shadow:0 4px 24px rgba(0,0,0,0.1)!important;
-  border:1px solid var(--border)!important;padding:0!important;
-}
-.pop{padding:0.8rem 1rem;min-width:160px;font-family:var(--font)}
-.pop-name{font-size:0.82rem;font-weight:600;color:var(--ink);margin-bottom:0.5rem}
-.pop-row{display:flex;justify-content:space-between;gap:1rem;font-size:0.72rem;color:var(--mid);margin:0.2rem 0}
-.pop-row span:last-child{font-family:var(--mono);font-size:0.7rem;color:var(--ink);font-weight:500}
-
-/* LEGEND */
-.map-legend{
-  position:absolute;bottom:24px;right:12px;background:#fff;
-  border:1px solid var(--border);border-radius:10px;padding:0.8rem 1rem;
-  z-index:500;min-width:148px;box-shadow:0 2px 12px rgba(0,0,0,0.06);
-}
-.leg-title{font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--warm-gray);margin-bottom:0.5rem;font-weight:600}
-.leg-body{}
-.leg-row{display:flex;align-items:center;gap:0.5rem;font-size:0.72rem;color:var(--mid);margin:0.28rem 0}
-.leg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;border:1px solid rgba(0,0,0,0.08)}
-.leg-bar{height:6px;border-radius:3px;flex-shrink:0}
-
-/* SOURCE NOTE */
-.src-note{
-  position:absolute;bottom:8px;left:50%;transform:translateX(-50%);
-  font-size:0.62rem;color:var(--warm-gray);z-index:500;
-  background:rgba(255,255,255,0.85);padding:0.2rem 0.6rem;border-radius:2rem;
-  border:1px solid var(--border);white-space:nowrap;
+/* ── SCROLLY SECTION ──────────────────────────────────── */
+.scrolly{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  max-width:1400px;
+  margin:0 auto;
 }
 
-/* CHART PANEL */
-.chart-panel{
-  flex:1;display:flex;flex-direction:column;
-  background:var(--ivory);overflow-y:auto;
+/* Sticky map column */
+.scrolly-map{
+  position:sticky;
+  top:var(--sticky-top);
+  height:calc(100vh - var(--sticky-top));
+  display:flex;
+  flex-direction:column;
+  padding:24px 32px;
+  border-right:1px solid var(--line);
+  overflow:hidden;
 }
-.cp-inner{padding:1.5rem 1.8rem;display:flex;flex-direction:column;gap:1.2rem;max-width:1100px}
-.insight-strip{display:grid;grid-template-columns:repeat(6,1fr);gap:0.6rem}
-.ik{
-  background:#fff;border:1px solid var(--border);border-radius:10px;
-  padding:0.8rem 0.9rem;
+.scrolly.flip .scrolly-map{
+  order:2;border-right:none;border-left:1px solid var(--line);
 }
-.ik-num{font-size:1.35rem;font-weight:600;font-family:var(--mono);line-height:1}
-.ik-lbl{font-size:0.67rem;color:var(--mid);margin-top:0.25rem;line-height:1.4}
-.chart-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
-.cc{
-  background:#fff;border:1px solid var(--border);border-radius:10px;padding:1.1rem;
+.scrolly.flip .steps-col{order:1}
+
+.map-box{
+  flex:1;
+  width:100%;
+  border:1px solid var(--line);
+  background:var(--paper-d);
+  min-height:0;
 }
-.cc h4{
-  font-size:0.68rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;
-  color:var(--warm-gray);margin-bottom:1rem;
+.map-footer{
+  display:flex;justify-content:space-between;align-items:flex-start;
+  flex-wrap:wrap;gap:6px;margin-top:8px;
 }
-.corr-block{background:#fff;border:1px solid var(--border);border-radius:10px;padding:1.1rem}
-.corr-block h4{
-  font-size:0.68rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;
-  color:var(--warm-gray);margin-bottom:0.8rem;
+.map-legend{display:flex;gap:10px;flex-wrap:wrap}
+.leg-row{display:flex;align-items:center;gap:6px;font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--ink-s)}
+.leg-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.leg-rect{width:14px;height:8px;border-radius:2px;flex-shrink:0}
+.map-src{font-family:"IBM Plex Mono",monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-m)}
+.map-tag{
+  font-family:"IBM Plex Mono",monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-s);background:rgba(240,232,213,.92);border:1px solid var(--line);
+  padding:5px 9px;margin-bottom:8px;backdrop-filter:blur(4px);
+  display:inline-block;
 }
-.cb-row{margin:0.45rem 0}
-.cb-labels{display:flex;justify-content:space-between;font-size:0.7rem;margin-bottom:0.22rem}
-.cb-labels span:first-child{color:var(--dark)}
-.cb-labels span:last-child{font-family:var(--mono);font-size:0.67rem;color:var(--mid)}
-.cb-track{height:5px;background:var(--cream);border-radius:3px;overflow:hidden}
-.cb-fill{height:100%;border-radius:3px;transition:width .5s ease}
-.src-info{
-  background:#fff;border:1px solid var(--border);border-radius:10px;padding:1.1rem;
-  font-size:0.75rem;color:var(--mid);line-height:1.7;
+
+/* Scrolling steps column */
+.steps-col{padding:10vh 50px 20vh}
+
+.step{
+  min-height:70vh;
+  display:flex;flex-direction:column;justify-content:center;
+  padding:40px 0;
+  opacity:0.25;
+  transition:opacity .5s ease;
 }
-.src-info strong{color:var(--dark);font-weight:500}
+.step.active{opacity:1}
+.step .eyebrow{font-family:"IBM Plex Mono",monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--rust);margin-bottom:14px}
+.step h3{font-family:"Playfair Display",serif;font-size:clamp(24px,2.6vw,34px);font-weight:600;line-height:1.05;letter-spacing:-.01em;margin-bottom:14px;color:var(--ink)}
+.step h3 em{font-style:italic;color:var(--acorn);font-weight:400}
+.step p{font-size:15px;line-height:1.65;color:var(--ink-s);margin-bottom:10px;max-width:420px}
+.step .pull{font-family:"Playfair Display",serif;font-style:italic;font-size:17px;line-height:1.45;color:var(--ink);border-left:2px solid var(--rust);padding-left:16px;margin:18px 0;max-width:420px}
+.stat-row{display:flex;align-items:baseline;gap:12px;margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
+.stat-n{font-family:"Playfair Display",serif;font-size:44px;font-weight:600;color:var(--ink);line-height:1}
+.stat-l{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-m);max-width:160px}
+
+/* ── BEHAVIOR CHARTS SECTION ──────────────────────────── */
+.charts-section{max-width:1200px;margin:0 auto;padding:60px 60px 100px}
+.chart-card{background:var(--paper-d);border:1px solid var(--line);padding:28px;margin-bottom:16px}
+.cc-head{margin-bottom:20px}
+.cc-eyebrow{font-family:"IBM Plex Mono",monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--rust);margin-bottom:7px}
+.cc-title{font-family:"Playfair Display",serif;font-size:clamp(18px,1.9vw,24px);font-weight:600;color:var(--ink);margin-bottom:6px}
+.cc-sub{font-size:13px;color:var(--ink-m);line-height:1.5}
+.cc-legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px}
+.cc-leg{display:flex;align-items:center;gap:6px;font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--ink-s)}
+.cc-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.chart-canvas-wrap{position:relative}
+
+/* Ratio spotlight */
+.ratio-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);margin-top:16px}
+.rc{background:var(--paper-d);padding:24px 20px}
+.rc-eyebrow{font-family:"IBM Plex Mono",monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-m);margin-bottom:8px}
+.rc-val{font-family:"Playfair Display",serif;font-size:clamp(32px,4vw,48px);font-weight:600;line-height:1;margin-bottom:6px}
+.rc-desc{font-size:12px;color:var(--ink-m);line-height:1.4;margin-bottom:14px}
+.rc-bar-row{display:flex;align-items:center;gap:8px;font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--ink-m);margin:4px 0}
+.rc-bar-lbl{width:40px;flex-shrink:0}
+.rc-track{flex:1;height:5px;background:var(--paper-e);border-radius:3px;overflow:hidden}
+.rc-fill{height:100%;border-radius:3px;transition:width 1s ease}
+.rc-pct{width:32px;text-align:right}
+
+/* ── COMPARE SECTION ──────────────────────────────────── */
+.compare-section{background:var(--paper-d);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:60px 0}
+.compare-inner{max-width:1200px;margin:0 auto;padding:0 60px}
+.compare-hdr{display:grid;grid-template-columns:1fr 1fr;gap:50px;margin-bottom:40px;padding-bottom:24px;border-bottom:1px solid var(--line)}
+.compare-hdr h5{font-family:"IBM Plex Mono",monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--rust);margin-bottom:7px}
+.compare-hdr h3{font-family:"Playfair Display",serif;font-size:26px;font-weight:600;margin-bottom:9px;color:var(--ink)}
+.compare-hdr p{font-size:14px;line-height:1.6;color:var(--ink-s)}
+.beh-filters{display:flex;flex-wrap:wrap;gap:4px;margin-top:12px}
+.fpill{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border:1px solid var(--line);border-radius:100px;font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--ink-s);cursor:pointer;background:transparent;transition:all .15s}
+.fpill:hover{border-color:var(--ink)}
+.fpill.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.fpill-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* compare maps */
+.compare-maps{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px}
+.cmap{background:var(--paper-d);border:1px solid var(--line)}
+.cmap-hdr{padding:12px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+.cmap-hdr .ctitle{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-s)}
+.cmap-hdr .cbadge{font-family:"IBM Plex Mono",monospace;font-size:10px;padding:3px 8px;background:var(--paper-e);color:var(--ink-m)}
+.cmap-body{height:clamp(220px,28vh,340px)}
+.cmap-stats{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line)}
+.cs{padding:12px 14px;border-right:1px solid var(--line)}
+.cs:last-child{border-right:none}
+.cs-val{font-family:"Playfair Display",serif;font-size:22px;font-weight:600;color:var(--ink)}
+.cs-key{font-family:"IBM Plex Mono",monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-m);margin-top:2px}
+
+/* compare charts */
+.compare-charts{display:grid;grid-template-columns:1.3fr 1fr;gap:16px}
+
+/* ── EXPLORE SECTION ──────────────────────────────────── */
+.explore-section{padding:60px 0 60px}
+.explore-head{max-width:1200px;margin:0 auto 30px;padding:0 60px;display:grid;grid-template-columns:1fr 1fr;gap:50px;align-items:end}
+.explore-head h2{font-family:"Playfair Display",serif;font-size:clamp(36px,4vw,56px);font-weight:600;line-height:.95;letter-spacing:-.015em;color:var(--ink)}
+.explore-head h2 em{font-style:italic;color:var(--acorn);font-weight:400}
+.explore-head p{font-size:15px;line-height:1.65;color:var(--ink-s)}
+.explore-layout{max-width:1400px;margin:0 auto;padding:0 40px;display:grid;grid-template-columns:220px 1fr 220px;border:1px solid var(--line)}
+.epanel{padding:20px 16px;background:var(--paper-d);border-right:1px solid var(--line)}
+.epanel.right{border-right:none;border-left:1px solid var(--line)}
+.epanel h5{font-family:"IBM Plex Mono",monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-m);margin-bottom:10px}
+.epanel h5+h5{margin-top:22px}
+.efpill{display:flex;align-items:center;gap:6px;padding:5px 8px;border:1px solid var(--line);border-radius:100px;font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--ink-s);cursor:pointer;background:transparent;transition:all .15s;width:100%;margin-bottom:3px}
+.efpill:hover{border-color:var(--ink)}
+.efpill.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.efpill-cnt{margin-left:auto;opacity:.5}
+.etog{display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:12px;color:var(--ink-s)}
+.tsw{width:26px;height:14px;border-radius:7px;background:var(--ink-f);position:relative;flex-shrink:0;transition:background .2s}
+.tsw::after{content:'';position:absolute;top:2px;left:2px;width:10px;height:10px;border-radius:50%;background:var(--paper);transition:transform .2s}
+.etog.on .tsw{background:var(--ink)}
+.etog.on .tsw::after{transform:translateX(12px)}
+#explore-map{width:100%;height:clamp(400px,58vh,660px)}
+.estat{margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.estat .ev{font-family:"Playfair Display",serif;font-size:28px;font-weight:600;color:var(--ink);line-height:1}
+.estat .ek{font-family:"IBM Plex Mono",monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-m);margin-top:4px}
+#ehover{font-family:"IBM Plex Mono",monospace;font-size:10px;line-height:1.65;color:var(--ink-s);min-height:70px}
+
+/* ── FOOTER ───────────────────────────────────────────── */
+footer{padding:60px 60px 50px;text-align:center;border-top:1px solid var(--line);margin-top:60px;font-family:"IBM Plex Mono",monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-m)}
+footer b{display:block;font-family:"Playfair Display",serif;font-style:italic;font-size:18px;font-weight:400;color:var(--ink);text-transform:none;letter-spacing:0;margin-bottom:12px}
+
+/* ── LEAFLET ──────────────────────────────────────────── */
+.leaflet-container{background:var(--paper-d)!important}
+.leaflet-popup-content-wrapper{background:var(--ink)!important;color:var(--paper)!important;border-radius:0!important;box-shadow:0 8px 30px rgba(0,0,0,.3)!important;border:none!important}
+.leaflet-popup-tip{background:var(--ink)!important}
+.leaflet-popup-content{margin:12px 16px!important;font-family:"IBM Plex Mono",monospace!important;font-size:11px!important;line-height:1.6!important;color:rgba(240,232,213,.85)!important}
+.leaflet-popup-content strong{color:#F0E8D5;font-family:"Playfair Display",serif;font-style:italic;font-size:13px}
+.leaflet-control-zoom a{background:var(--paper)!important;color:var(--ink)!important;border-color:var(--line)!important}
+.leaflet-control-attribution{background:rgba(240,232,213,.8)!important;font-size:9px!important}
+
+/* ── UTILS ────────────────────────────────────────────── */
+.reveal{opacity:0;transform:translateY(20px);transition:opacity .65s ease,transform .65s ease}
+.reveal.vis{opacity:1;transform:translateY(0)}
+
+/* ── RESPONSIVE ───────────────────────────────────────── */
+@media(max-width:1024px){
+  .hero{gap:40px;padding-left:40px;padding-right:40px}
+  .explore-layout{grid-template-columns:180px 1fr}
+  .epanel.right{display:none}
+  .compare-charts{grid-template-columns:1fr}
+  .charts-section,.compare-inner,.explore-head{padding-left:40px;padding-right:40px}
+  .chapter-mark{padding-left:40px;padding-right:40px}
+  .scrolly-map{padding-left:40px;padding-right:40px}
+  .ratio-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:768px){
+  .scrolly{grid-template-columns:1fr}
+  .scrolly.flip .scrolly-map{order:0;border-left:none;border-right:none}
+  .scrolly.flip .steps-col{order:1}
+  .scrolly-map{position:relative;top:auto;height:auto;min-height:300px;padding:16px;border-right:none;border-bottom:1px solid var(--line)}
+  .map-box{height:280px}
+  .steps-col{padding:4vh 20px 10vh}
+  .step{min-height:auto;padding:28px 0;opacity:1}
+  :root{--topbar-h:48px;--banner-h:72px}
+  .topbar nav{display:none}
+  .topbar{padding:0 16px}
+  .brand{font-size:10px}
+  .chapter-banner{padding:0 20px 12px;top:var(--topbar-h)}
+  .cb-num{font-size:30px}
+  .cb-title{font-size:20px}
+  .hero{grid-template-columns:1fr;padding:calc(var(--topbar-h)+40px) 20px 50px;gap:24px}
+  .hero-viz{display:none}
+  .scrolly-map{padding:0 16px}
+  .map-box{height:clamp(220px,38vh,320px)}
+  .map-footer{flex-direction:column;gap:6px}
+  .steps-grid{grid-template-columns:1fr}
+  .step{padding:24px 20px;border-right:none}
+  .chapter-mark{grid-template-columns:1fr;padding:0 20px;margin:50px auto 30px}
+  .ch-num{display:none}
+  .charts-section{padding:40px 20px 60px}
+  .compare-inner{padding:0 20px}
+  .compare-maps,.compare-hdr,.compare-charts{grid-template-columns:1fr}
+  .explore-head{grid-template-columns:1fr;padding:0 20px}
+  .explore-layout{grid-template-columns:1fr;padding:0 16px}
+  .epanel.right{display:none}
+  .ratio-grid{grid-template-columns:1fr 1fr}
+  footer{padding:40px 20px 30px}
+}
+@media(max-width:480px){
+  .ratio-grid{grid-template-columns:1fr}
+  .beh-filters{flex-wrap:wrap}
+  .compare-hdr{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
 
-<div class="hdr">
-  <div class="hdr-left">
-    <div class="logo"><span class="logo-dot"></span>Squirrel's Eye View of Central Park</div>
-    <div class="hdr-title">Squirrels × Human Footprint · 2018 Squirrel Census & NYC Open Data</div>
+<div id="loader">
+  <div class="loader-sq">🐿️</div>
+  <div class="loader-txt" id="loader-msg">Loading data…</div>
+  <div class="loader-bar"><div class="loader-fill" id="loader-fill"></div></div>
+</div>
+
+<div id="progress"></div>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="brand">
+    <svg id="logo-nav" viewBox="220 155 445 710"><defs><filter x="0%" y="0%" width="100%" height="100%" id="d725e56970"><feColorMatrix values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1 0" color-interpolation-filters="sRGB"/></filter><clipPath id="384d45309e"><path d="M 0.199219 0 L 809.800781 0 L 809.800781 1012 L 0.199219 1012 Z M 0.199219 0 " clip-rule="nonzero"/></clipPath><clipPath id="e52743be2c"><path d="M 264.8125 207.375 L 626 207.375 L 626 804 L 264.8125 804 Z M 264.8125 207.375 " clip-rule="nonzero"/></clipPath><mask id="42ff1de6b4"><g filter="url(#d725e56970)"><rect x="-81" width="972" fill="#000000" y="-101.249997" height="1214.999964" fill-opacity="0.4"/></g></mask><clipPath id="ac030cb0c4"><rect x="0" width="362" y="0" height="597"/></clipPath></defs><g clip-path="url(#384d45309e)"></g><path fill="#a45621" d="M 427.757812 772.519531 C 425.769531 773.015625 421.796875 773.015625 418.320312 773.511719 C 414.34375 774.011719 410.867188 773.511719 407.390625 772.023438 C 403.417969 770.53125 401.429688 767.550781 401.429688 763.082031 C 401.429688 760.597656 401.429688 758.609375 401.429688 756.125 C 394.972656 755.628906 388.015625 755.132812 381.558594 754.636719 C 381.0625 758.609375 381.0625 762.582031 380.066406 766.558594 C 378.082031 775.003906 370.628906 780.46875 362.183594 780.964844 C 360.195312 780.964844 358.210938 780.964844 356.222656 780.964844 C 347.28125 781.460938 338.835938 781.957031 329.890625 781.957031 C 323.929688 782.457031 317.96875 782.953125 312.007812 782.953125 C 304.558594 782.953125 298.097656 780.964844 293.628906 774.507812 C 292.136719 772.519531 291.640625 770.035156 292.632812 767.550781 C 293.628906 763.578125 295.613281 760.597656 299.09375 758.609375 C 301.078125 757.121094 303.066406 755.628906 304.558594 754.136719 C 305.054688 753.640625 306.046875 753.144531 306.542969 752.648438 C 304.558594 751.15625 302.074219 749.171875 300.085938 747.183594 C 296.609375 743.707031 293.128906 740.726562 289.652344 736.75 C 285.679688 732.28125 282.203125 727.3125 279.222656 722.34375 C 273.257812 713.402344 269.78125 703.964844 267.792969 693.53125 C 266.304688 686.578125 265.808594 680.117188 265.3125 673.164062 C 264.8125 665.214844 267.296875 657.761719 269.78125 650.3125 C 273.257812 640.871094 277.234375 631.433594 283.195312 622.492188 C 290.148438 611.5625 296.609375 601.128906 303.066406 589.703125 C 309.523438 578.773438 315.484375 567.347656 321.945312 555.921875 C 328.898438 544 336.351562 532.574219 344.300781 521.148438 C 348.273438 515.1875 353.242188 510.714844 359.203125 506.742188 C 363.671875 503.761719 367.152344 499.785156 371.621094 496.804688 C 375.597656 493.824219 379.570312 491.339844 384.042969 489.355469 C 387.023438 487.367188 390.5 486.375 393.480469 484.386719 C 394.472656 483.890625 395.46875 482.894531 395.964844 481.902344 C 399.441406 477.429688 403.914062 473.953125 408.382812 470.972656 C 414.84375 466.503906 421.796875 464.515625 429.25 463.519531 C 432.230469 463.023438 435.210938 462.527344 438.6875 462.03125 C 438.191406 460.042969 437.199219 458.554688 436.699219 456.566406 C 434.214844 449.113281 435.210938 442.160156 437.695312 434.707031 C 439.679688 427.753906 442.660156 420.796875 446.636719 414.835938 C 450.113281 408.875 453.09375 403.410156 456.570312 397.945312 C 459.054688 393.972656 460.050781 389.5 460.546875 385.03125 C 461.042969 382.050781 461.539062 378.570312 461.539062 375.589844 C 461.539062 369.132812 459.550781 362.675781 457.070312 356.714844 C 453.589844 348.269531 447.628906 340.816406 442.660156 332.867188 C 439.183594 327.402344 436.203125 320.945312 433.71875 314.488281 C 429.746094 305.046875 428.253906 294.617188 428.253906 284.679688 C 428.753906 276.730469 428.753906 268.78125 429.25 260.835938 C 429.746094 252.390625 432.230469 244.441406 435.707031 236.988281 C 437.695312 233.015625 439.679688 228.542969 441.667969 224.570312 C 442.660156 222.582031 443.65625 220.097656 445.144531 218.109375 C 450.113281 210.164062 458.0625 208.671875 466.011719 212.648438 C 472.46875 216.125 479.421875 219.601562 484.886719 224.570312 C 490.851562 229.539062 495.816406 235.5 499.792969 242.453125 C 504.261719 250.402344 507.742188 258.351562 509.726562 267.292969 C 510.722656 271.765625 511.21875 276.730469 511.714844 281.699219 C 512.210938 286.171875 512.707031 290.640625 512.707031 294.617188 C 512.210938 301.074219 511.714844 307.035156 510.722656 313.492188 C 510.222656 318.460938 509.726562 323.925781 509.230469 328.894531 C 508.734375 338.828125 508.238281 348.765625 507.742188 358.699219 C 512.707031 357.707031 517.179688 356.714844 522.148438 356.214844 C 521.152344 351.25 520.160156 345.785156 519.664062 340.320312 C 518.667969 332.867188 517.675781 325.914062 517.675781 318.460938 C 517.179688 309.023438 516.683594 299.582031 516.683594 290.640625 C 516.683594 282.195312 516.1875 273.75 517.179688 265.304688 C 517.675781 257.855469 519.664062 250.898438 521.648438 243.945312 C 523.140625 237.984375 524.632812 231.523438 528.605469 226.058594 C 530.09375 224.074219 532.082031 221.589844 534.070312 220.097656 C 536.058594 218.609375 539.039062 219.105469 540.527344 221.09375 C 543.507812 224.570312 546.984375 228.542969 549.964844 232.519531 C 553.445312 237.984375 556.425781 243.945312 559.40625 249.410156 C 559.902344 250.898438 560.398438 251.890625 561.394531 253.382812 C 564.375 259.839844 566.359375 266.300781 566.359375 273.253906 C 566.359375 278.222656 566.855469 283.191406 566.855469 288.15625 C 566.855469 296.601562 565.863281 304.550781 563.875 312.5 C 561.394531 322.433594 558.410156 332.371094 556.425781 342.804688 C 554.933594 348.765625 553.941406 355.222656 552.949219 361.679688 C 552.949219 362.675781 554.4375 363.667969 555.929688 364.660156 C 557.417969 365.65625 559.40625 365.65625 560.894531 366.648438 C 569.839844 371.617188 578.78125 376.585938 587.722656 382.050781 C 592.691406 385.527344 598.15625 389.003906 600.140625 395.460938 C 601.136719 399.4375 602.128906 403.410156 603.121094 406.886719 C 604.117188 410.367188 605.109375 412.851562 607.097656 415.832031 C 610.078125 420.300781 612.5625 424.773438 614.546875 429.738281 C 617.527344 438.183594 619.515625 447.128906 622 455.574219 C 622.992188 459.050781 622.992188 463.023438 623.492188 467 C 623.988281 473.953125 622.496094 480.910156 618.027344 486.871094 C 617.03125 488.359375 615.542969 489.355469 614.546875 490.347656 C 613.058594 491.835938 612.5625 493.824219 613.554688 495.316406 C 615.046875 496.804688 616.535156 496.804688 618.523438 495.316406 C 619.019531 494.820312 620.011719 494.320312 621.007812 493.824219 C 621.007812 496.308594 621.007812 497.800781 620.511719 499.785156 C 619.515625 503.761719 619.019531 508.230469 617.527344 511.210938 C 614.050781 517.171875 609.082031 521.148438 601.632812 521.644531 C 596.664062 522.140625 591.695312 522.140625 586.730469 522.140625 C 586.230469 522.140625 585.238281 522.140625 584.246094 521.644531 C 584.742188 523.136719 585.238281 524.625 586.230469 526.117188 C 590.703125 533.566406 592.191406 541.515625 594.179688 549.464844 C 595.175781 554.433594 596.664062 559.398438 597.65625 564.367188 C 598.15625 566.355469 598.15625 568.34375 598.15625 570.328125 C 598.15625 573.808594 598.652344 577.285156 598.652344 581.257812 C 598.652344 585.234375 598.652344 589.703125 598.652344 593.679688 C 598.15625 599.144531 597.65625 604.109375 597.160156 609.574219 C 596.664062 614.046875 596.167969 618.515625 595.175781 622.988281 C 593.1875 630.441406 591.199219 637.890625 588.714844 644.847656 C 585.238281 654.78125 581.265625 664.71875 577.289062 674.652344 C 574.804688 680.613281 572.320312 686.078125 569.839844 692.039062 C 567.851562 696.511719 565.367188 700.984375 563.378906 705.453125 C 558.910156 715.390625 553.941406 724.828125 551.953125 735.757812 C 551.457031 738.738281 550.960938 741.71875 550.960938 744.699219 C 550.464844 748.175781 549.96875 751.15625 549.96875 754.636719 C 549.96875 757.117188 549.96875 760.101562 550.464844 762.582031 C 550.960938 765.5625 551.953125 768.546875 552.449219 771.527344 C 552.949219 774.007812 554.4375 775.996094 554.933594 778.480469 C 556.425781 784.9375 555.929688 790.898438 552.449219 796.363281 C 551.953125 797.359375 550.464844 798.351562 549.46875 798.351562 C 542.515625 799.84375 535.558594 801.828125 528.109375 802.328125 C 523.636719 802.824219 518.667969 802.328125 514.199219 800.835938 C 507.242188 798.847656 500.785156 792.886719 501.28125 782.953125 C 501.777344 774.007812 502.773438 765.5625 502.773438 756.621094 C 502.773438 749.667969 501.28125 743.210938 499.296875 736.75 C 497.804688 731.285156 495.320312 726.320312 493.332031 721.351562 C 492.339844 718.867188 491.347656 718.371094 488.863281 719.859375 C 485.882812 721.351562 482.40625 722.34375 479.921875 723.339844 C 479.921875 736.75 479.921875 750.164062 479.921875 763.578125 C 479.921875 769.539062 479.425781 775.5 479.425781 781.460938 C 479.425781 786.429688 478.429688 791.398438 474.953125 795.371094 C 470.980469 799.84375 466.011719 801.828125 460.546875 802.328125 C 453.589844 802.824219 447.132812 803.320312 440.179688 802.824219 C 429.746094 801.828125 422.789062 793.882812 423.289062 783.449219 C 423.289062 781.460938 425.273438 779.972656 426.269531 777.984375 C 427.261719 776.992188 430.242188 773.511719 431.234375 772.023438 C 430.242188 771.527344 429.746094 772.023438 427.757812 772.519531 Z M 427.757812 772.519531 " fill-opacity="1" fill-rule="nonzero"/><path fill="#202020" d="M 592.191406 471.964844 C 597.160156 473.953125 601.632812 475.445312 606.101562 476.933594 C 611.566406 478.921875 617.03125 479.417969 622 475.941406 C 623.492188 478.921875 621.503906 483.394531 618.523438 485.875 C 612.066406 491.339844 609.582031 490.347656 605.109375 487.863281 C 600.636719 485.378906 597.160156 480.410156 594.179688 475.941406 C 593.1875 475.445312 592.691406 473.953125 592.191406 471.964844 Z M 549.964844 428.746094 C 549.964844 427.257812 549.964844 425.765625 549.964844 423.777344 C 549.46875 417.816406 547.980469 412.851562 542.019531 409.867188 C 536.554688 406.886719 530.59375 406.390625 524.632812 407.386719 C 523.636719 407.386719 522.644531 408.378906 522.148438 408.875 C 520.65625 410.863281 519.664062 413.347656 518.667969 415.832031 C 515.6875 423.777344 517.179688 430.238281 522.644531 434.707031 C 527.113281 438.1875 532.578125 438.683594 538.042969 438.1875 C 540.527344 437.6875 543.507812 437.6875 545.992188 437.6875 C 548.476562 437.6875 549.46875 436.695312 549.46875 434.210938 C 549.964844 432.722656 549.964844 430.734375 549.964844 428.746094 Z M 549.964844 428.746094 " fill-opacity="1" fill-rule="nonzero"/><path fill="#ffffff" d="M 527.613281 517.175781 C 510.222656 517.671875 489.855469 512.703125 474.953125 504.257812 C 461.042969 496.308594 451.605469 482.398438 449.121094 466.503906 C 448.125 461.535156 446.140625 450.109375 454.585938 450.109375 C 458.0625 450.109375 463.527344 453.585938 466.507812 455.078125 C 470.980469 457.0625 474.953125 460.042969 478.925781 463.023438 C 492.835938 473.457031 505.753906 484.882812 523.636719 487.367188 C 527.113281 487.863281 536.554688 489.355469 539.535156 486.375 C 541.523438 484.386719 541.523438 480.410156 542.515625 477.929688 C 544.003906 474.449219 545.992188 471.46875 548.476562 468.488281 C 560.398438 455.574219 577.785156 454.578125 589.210938 468.984375 C 591.695312 471.964844 592.191406 474.449219 596.167969 479.914062 C 600.140625 485.378906 605.109375 489.355469 606.601562 489.851562 C 616.039062 492.832031 619.515625 482.398438 620.507812 476.933594 C 622.992188 467.496094 627.464844 473.953125 629.949219 479.417969 C 632.929688 486.375 631.4375 496.804688 627.464844 503.265625 C 623.492188 509.722656 615.542969 516.675781 609.582031 520.652344 C 602.128906 525.621094 593.683594 527.109375 584.742188 525.621094 C 580.269531 524.625 575.300781 523.136719 570.832031 522.636719 C 566.359375 522.140625 561.890625 522.636719 556.921875 521.644531 C 551.457031 520.15625 546.984375 516.675781 541.519531 516.675781 C 538.042969 516.179688 532.578125 516.675781 527.613281 517.175781 Z M 527.613281 517.175781 " fill-opacity="1" fill-rule="nonzero"/><path fill="#ffffff" d="M 494.328125 724.332031 C 492.339844 719.363281 491.84375 717.375 486.378906 719.859375 C 480.417969 722.34375 475.945312 723.835938 474.457031 715.886719 C 471.972656 703.964844 477.4375 690.054688 480.914062 678.628906 C 488.367188 654.285156 497.804688 632.925781 516.683594 615.535156 C 528.605469 604.609375 559.40625 575.296875 576.296875 590.699219 C 584.742188 598.644531 581.265625 611.5625 577.289062 620.503906 C 572.320312 632.925781 563.875 643.851562 556.425781 655.277344 C 547.980469 668.195312 538.539062 679.125 528.109375 690.054688 C 517.179688 701.976562 506.746094 713.898438 494.328125 724.332031 Z M 494.328125 724.332031 " fill-opacity="1" fill-rule="nonzero"/><path fill="#ffffff" d="M 533.078125 420.300781 C 533.078125 413.347656 542.515625 413.84375 542.019531 420.300781 C 541.023438 426.261719 533.078125 426.261719 533.078125 420.300781 Z M 533.078125 420.300781 " fill-opacity="1" fill-rule="nonzero"/><path fill="#ffffff" d="M 528.605469 416.824219 C 532.082031 416.824219 531.585938 422.289062 528.605469 421.792969 C 525.128906 421.792969 525.625 416.328125 528.605469 416.824219 Z M 528.605469 416.824219 " fill-opacity="1" fill-rule="nonzero"/><g clip-path="url(#e52743be2c)"><g mask="url(#42ff1de6b4)"><g transform="matrix(1, 0, 0, 1, 264, 207)"><g clip-path="url(#ac030cb0c4)"><path fill="#000000" d="M 238.277344 86.125 C 237.777344 97.054688 235.296875 107.488281 231.816406 117.421875 C 227.84375 129.84375 223.867188 141.765625 219.894531 154.183594 C 218.902344 157.660156 218.40625 161.636719 217.410156 165.609375 C 216.914062 167.101562 216.914062 169.089844 214.429688 169.089844 C 212.441406 169.089844 211.945312 167.101562 211.945312 165.609375 C 211.449219 154.679688 208.46875 144.25 204.496094 134.3125 C 202.011719 128.847656 198.535156 123.382812 195.550781 117.917969 C 191.578125 110.964844 187.105469 104.507812 183.132812 97.054688 C 178.164062 88.113281 176.179688 78.671875 175.679688 68.738281 C 175.183594 56.816406 177.171875 45.886719 180.648438 34.460938 C 182.636719 28.5 185.121094 22.539062 188.101562 16.574219 C 189.589844 13.097656 193.070312 11.609375 196.546875 13.59375 C 205.488281 18.066406 212.941406 23.53125 218.902344 31.976562 C 220.390625 34.460938 222.378906 36.449219 223.867188 38.929688 C 230.328125 46.878906 234.300781 55.820312 235.296875 66.253906 C 236.289062 72.710938 237.28125 79.667969 238.277344 86.125 Z M 238.277344 86.125 " fill-opacity="1" fill-rule="nonzero"/><path fill="#000000" d="M 290.4375 155.675781 C 289.445312 155.675781 288.949219 155.179688 287.953125 155.179688 C 281 151.699219 273.546875 150.707031 266.09375 149.214844 C 264.109375 148.71875 262.121094 148.222656 259.636719 148.222656 C 258.148438 148.222656 257.648438 147.726562 257.648438 146.234375 C 256.160156 132.324219 253.179688 118.914062 253.179688 104.507812 C 253.179688 97.054688 252.683594 89.105469 252.1875 81.65625 C 252.1875 73.210938 251.6875 64.765625 252.683594 56.320312 C 253.179688 48.867188 255.167969 41.910156 257.152344 34.460938 C 258.644531 28.5 260.132812 22.539062 263.613281 17.570312 C 265.101562 15.085938 266.59375 12.601562 269.574219 11.113281 C 272.058594 9.621094 275.039062 10.613281 276.527344 12.105469 C 279.507812 15.582031 282.984375 19.558594 285.964844 23.53125 C 289.445312 28.996094 292.425781 34.957031 295.40625 40.421875 C 295.902344 41.414062 296.398438 42.410156 296.398438 43.402344 C 299.875 49.859375 301.863281 57.3125 302.359375 64.765625 C 302.359375 70.726562 303.355469 77.183594 302.855469 83.144531 C 302.359375 90.101562 301.367188 97.054688 299.875 103.511719 C 297.394531 113.449219 294.910156 123.382812 292.425781 133.816406 C 290.933594 139.777344 289.941406 146.234375 288.949219 152.695312 C 288.449219 153.191406 289.941406 154.183594 290.4375 155.675781 Z M 290.4375 155.675781 " fill-opacity="1" fill-rule="nonzero"/><path fill="#000000" d="M 334.15625 386.679688 C 331.671875 381.710938 329.683594 377.238281 326.703125 372.769531 C 321.238281 363.328125 313.785156 355.382812 304.347656 349.917969 C 294.910156 344.453125 284.476562 339.484375 274.042969 336.007812 C 263.613281 332.527344 253.179688 328.554688 243.242188 324.582031 C 226.851562 317.625 213.933594 306.199219 202.507812 293.285156 C 201.515625 292.289062 201.015625 291.296875 200.023438 289.804688 C 202.011719 290.800781 203.003906 290.800781 204.496094 291.792969 C 212.941406 295.765625 222.378906 298.25 231.320312 299.742188 C 238.773438 300.734375 246.222656 301.230469 253.675781 301.730469 C 256.160156 301.730469 258.148438 301.230469 260.632812 301.230469 C 270.566406 300.734375 279.507812 303.714844 288.449219 307.691406 C 294.910156 310.671875 301.863281 313.652344 309.316406 314.644531 C 313.289062 315.140625 317.265625 316.632812 320.742188 318.121094 C 322.730469 319.117188 323.722656 321.601562 324.21875 324.082031 C 327.199219 332.527344 328.191406 338.492188 330.179688 345.445312 C 333.65625 356.871094 334.15625 364.324219 334.15625 374.257812 C 334.15625 377.734375 334.15625 382.207031 334.15625 386.679688 Z M 334.15625 386.679688 " fill-opacity="1" fill-rule="nonzero"/><path fill="#000000" d="M 233.804688 525.777344 C 231.320312 520.3125 229.332031 512.859375 227.347656 512.363281 C 234.300781 508.390625 240.261719 500.9375 245.726562 495.472656 C 256.160156 485.039062 266.09375 474.609375 276.03125 464.175781 C 283.980469 455.234375 291.429688 446.292969 299.378906 436.851562 C 299.875 436.355469 300.871094 435.859375 301.367188 434.867188 C 301.863281 434.867188 301.863281 434.867188 302.359375 435.363281 C 302.359375 436.355469 302.359375 437.351562 301.863281 438.34375 C 298.882812 443.3125 295.40625 448.277344 291.929688 453.246094 C 280.503906 469.144531 267.585938 484.046875 253.675781 497.957031 C 246.222656 505.410156 239.269531 514.351562 234.796875 524.285156 C 234.796875 524.785156 234.300781 525.28125 233.804688 525.777344 Z M 233.804688 525.777344 " fill-opacity="1" fill-rule="nonzero"/><path fill="#000000" d="M 56.949219 489.511719 C 74.335938 504.914062 83.28125 515.34375 102.65625 526.769531 C 122.027344 538.195312 155.808594 543.660156 159.785156 544.65625 C 163.757812 545.152344 164.753906 544.65625 165.25 546.640625 C 166.738281 552.105469 168.726562 557.074219 167.234375 562.539062 C 166.738281 565.023438 165.746094 565.519531 163.261719 565.519531 C 159.289062 566.015625 157.300781 566.015625 154.320312 566.511719 C 150.34375 567.011719 146.867188 566.511719 143.390625 565.023438 C 139.417969 563.53125 137.429688 560.054688 137.429688 556.082031 C 137.429688 554.09375 137.429688 551.113281 137.429688 549.125 C 137.429688 548.628906 107.621094 549.621094 94.210938 538.691406 C 71.855469 520.3125 56.949219 490.007812 56.949219 489.511719 Z M 56.949219 489.511719 " fill-opacity="1" fill-rule="nonzero"/><path fill="#000000" d="M 352.039062 280.863281 C 351.542969 281.359375 351.046875 281.855469 350.546875 281.855469 C 349.554688 282.355469 348.5625 282.355469 347.566406 282.851562 C 347.070312 282.851562 346.574219 283.84375 346.574219 283.84375 C 347.566406 287.320312 345.582031 290.800781 344.585938 294.277344 C 343.097656 298.746094 344.585938 301.230469 349.058594 302.722656 C 350.050781 302.722656 350.546875 303.21875 352.039062 303.21875 C 351.046875 303.714844 350.546875 304.210938 350.050781 304.210938 C 348.0625 304.210938 346.078125 304.210938 344.089844 304.210938 C 343.097656 304.210938 342.101562 303.21875 342.101562 302.722656 C 341.109375 300.734375 339.621094 300.734375 337.632812 301.730469 C 332.167969 303.714844 326.703125 304.210938 321.238281 303.714844 C 314.78125 303.21875 308.820312 301.230469 302.855469 300.238281 C 301.863281 300.238281 300.871094 299.246094 300.375 298.746094 C 300.375 298.746094 300.375 298.25 300.871094 298.25 C 301.367188 298.25 301.863281 297.753906 302.359375 298.25 C 310.308594 300.238281 318.753906 299.742188 326.703125 299.246094 C 330.675781 299.246094 334.652344 297.257812 338.625 296.265625 C 340.613281 295.765625 341.605469 294.277344 342.101562 292.289062 C 342.601562 289.308594 342.601562 286.328125 343.097656 282.851562 C 343.097656 282.355469 342.601562 281.359375 341.605469 280.863281 C 340.117188 279.871094 338.625 278.875 337.632812 277.386719 C 336.140625 275.894531 334.652344 273.910156 333.65625 272.417969 C 338.128906 277.386719 343.59375 282.355469 352.039062 280.863281 Z M 352.039062 280.863281 " fill-opacity="1" fill-rule="nonzero"/><path fill="#000000" d="M 215.921875 546.640625 C 213.933594 542.667969 211.945312 538.695312 209.960938 535.214844 C 206.980469 529.253906 203.003906 527.765625 196.050781 523.292969 C 195.054688 522.796875 177.667969 509.382812 176.675781 508.390625 C 138.421875 474.609375 185.617188 507.394531 191.578125 509.878906 C 197.539062 512.363281 207.476562 516.339844 213.4375 515.34375 C 214.925781 514.847656 215.921875 514.351562 215.921875 515.839844 C 216.417969 525.777344 215.921875 536.210938 216.417969 546.144531 C 215.921875 546.144531 215.921875 546.144531 215.921875 546.640625 Z M 215.921875 546.640625 " fill-opacity="1" fill-rule="nonzero"/><path fill="#000000" d="M 1.808594 473.613281 C 2.304688 478.085938 2.800781 482.558594 3.792969 486.53125 C 5.78125 496.964844 9.257812 506.402344 15.222656 515.34375 C 18.699219 520.3125 22.175781 525.28125 25.652344 529.75 C 28.632812 533.230469 32.113281 536.707031 36.085938 540.183594 C 38.074219 542.171875 40.558594 543.660156 42.542969 545.648438 C 41.550781 546.144531 41.054688 546.640625 40.558594 547.136719 C 38.570312 548.628906 37.078125 550.121094 35.09375 551.609375 C 31.613281 553.597656 29.628906 556.578125 28.632812 560.550781 C 28.136719 563.035156 28.136719 565.023438 29.628906 567.507812 C 34.097656 573.964844 40.558594 575.953125 48.007812 575.953125 C 53.96875 575.953125 59.929688 575.457031 65.890625 574.957031 C 74.835938 574.460938 83.28125 573.964844 92.222656 573.964844 C 94.210938 573.964844 96.195312 573.964844 98.183594 573.964844 C 106.628906 573.964844 114.082031 568.003906 116.066406 559.558594 C 117.0625 555.582031 117.0625 551.609375 117.558594 547.636719 C 119.546875 547.636719 121.53125 548.132812 123.023438 548.132812 C 121.035156 546.640625 118.550781 545.152344 115.074219 544.65625 C 107.621094 543.164062 97.191406 541.175781 84.769531 536.707031 C 58.441406 527.265625 25.15625 509.382812 1.808594 473.613281 Z M 1.808594 473.613281 " fill-opacity="1" fill-rule="nonzero"/><path fill="#000000" d="M 59.433594 525.28125 C 78.3125 535.710938 89.738281 537.203125 81.789062 526.273438 C 75.332031 517.332031 106.132812 546.144531 106.132812 546.144531 L 66.390625 543.164062 Z M 59.433594 525.28125 " fill-opacity="1" fill-rule="nonzero"/></g></g></g></g></svg>
+    Squirrel's Eye View of Central Park
   </div>
-  <div class="tabs">
-    <button class="tab on" onclick="switchView('map')">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3,6 9,3 15,6 21,3 21,18 15,21 9,18 3,21"/></svg>
-      Map
-    </button>
-    <button class="tab" onclick="switchView('charts')">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-      Analysis
-    </button>
+  <nav>
+    <a href="#ch1">Humans</a>
+    <a href="#ch2">Squirrels</a>
+    <a href="#ch3">Behaviors</a>
+    <a href="#ch4">N vs S</a>
+    <a href="#ch5">Explore</a>
+  </nav>
+</div>
+
+<!-- HERO -->
+<section class="hero" id="hero">
+  <div>
+    <div class="hero-kicker">NYC Squirrel Census 2018</div>
+    <h1>Squirrel's <em>Eye View</em> of Central Park</h1>
+    <p class="dek">How 3,023 squirrels and 22 million humans navigate the same 843 acres — and what their behavior reveals about each other.</p>
+    <div class="byline">
+      <div><span>Dataset</span><b>2018 NYC Squirrel Census</b></div>
+      <div><span>Location</span><b>Central Park, NYC</b></div>
+      <div><span>Period</span><b>October 2018</b></div>
+    </div>
   </div>
-  <div class="hdr-pills">
-    <span class="hpill" id="pill-sq">Loading...</span>
-    <span class="hpill">37.5M annual visits</span>
-    <span class="hpill">843 acres</span>
+  <div class="hero-viz">
+    <svg id="logo-hero" viewBox="220 155 445 710"><defs><filter x="0%" y="0%" width="100%" height="100%" id="d725e56970"><feColorMatrix values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1 0" color-interpolation-filters="sRGB"/></filter><clipPath id="384d45309e"><path d="M 0.199219 0 L 809.800781 0 L 809.800781 1012 L 0.199219 1012 Z M 0.199219 0 " clip-rule="nonzero"/></clipPath><clipPath id="e52743be2c"><path d="M 264.8125 207.375 L 626 207.375 L 626 804 L 264.8125 804 Z M 264.8125 207.375 " clip-rule="nonzero"/></clipPath><mask id="42ff1de6b4"><g filter="url(#d725e56970)"><rect x="-81" width="972" fill="#000000" y="-101.249997" height="1214.999964" fill-opacity="0.4"/></g></mask><clipPath id="ac030cb0c4"><rect x="0" width="362" y="0" height="597"/></clipPath></defs><g clip-path="url(#384d45309e)"></g><path fill="#a45621" d="M 427.757812 772.519531 C 425.769531 773.015625 421.796875 773.015625 418.320312 773.511719 C 414.34375 774.011719 410.867188 773.511719 407.390625 772.023438 C 403.417969 770.53125 401.429688 767.550781 401.429688 763.082031 C 401.429688 760.597656 401.429688 758.609375 401.429688 756.125 C 394.972656 755.628906 388.015625 755.132812 381.558594 754.636719 C 381.0625 758.609375 381.0625 762.582031 380.066406 766.558594 C 378.082031 775.003906 370.628906 780.46875 362.183594 780.964844 C 360.195312 780.964844 358.210938 780.964844 356.222656 780.964844 C 347.28125 781.460938 338.835938 781.957031 329.890625 781.957031 C 323.929688 782.457031 317.96875 782.953125 312.007812 782.953125 C 304.558594 782.953125 298.097656 780.964844 293.628906 774.507812 C 292.136719 772.519531 291.640625 770.035156 292.632812 767.550781 C 293.628906 763.578125 295.613281 760.597656 299.09375 758.609375 C 301.078125 757.121094 303.066406 755.628906 304.558594 754.136719 C 305.054688 753.640625 306.046875 753.144531 306.542969 752.648438 C 304.558594 751.15625 302.074219 749.171875 300.085938 747.183594 C 296.609375 743.707031 293.128906 740.726562 289.652344 736.75 C 285.679688 732.28125 282.203125 727.3125 279.222656 722.34375 C 273.257812 713.402344 269.78125 703.964844 267.792969 693.53125 C 266.304688 686.578125 265.808594 680.117188 265.3125 673.164062 C 264.8125 665.214844 267.296875 657.761719 269.78125 650.3125 C 273.257812 640.871094 277.234375 631.433594 283.195312 622.492188 C 290.148438 611.5625 296.609375 601.128906 303.066406 589.703125 C 309.523438 578.773438 315.484375 567.347656 321.945312 555.921875 C 328.898438 544 336.351562 532.574219 344.300781 521.148438 C 348.273438 515.1875 353.242188 510.714844 359.203125 506.742188 C 363.671875 503.761719 367.152344 499.785156 371.621094 496.804688 C 375.597656 493.824219 379.570312 491.339844 384.042969 489.355469 C 387.023438 487.367188 390.5 486.375 393.480469 484.386719 C 394.472656 483.890625 395.46875 482.894531 395.964844 481.902344 C 399.441406 477.429688 403.914062 473.953125 408.382812 470.972656 C 414.84375 466.503906 421.796875 464.515625 429.25 463.519531 C 432.230469 463.023438 435.210938 462.527344 438.6875 462.03125 C 438.191406 460.042969 437.199219 458.554688 436.699219 456.566406 C 434.214844 449.113281 435.210938 442.160156 437.695312 434.707031 C 439.679688 427.753906 442.660156 420.796875 446.636719 414.835938 C 450.113281 408.875 453.09375 403.410156 456.570312 397.945312 C 459.054688 393.972656 460.050781 389.5 460.546875 385.03125 C 461.042969 382.050781 461.539062 378.570312 461.539062 375.589844 C 461.539062 369.132812 459.550781 362.675781 457.070312 356.714844 C 453.589844 348.269531 447.628906 340.816406 442.660156 332.867188 C 439.183594 327.402344 436.203125 320.945312 433.71875 314.488281 C 429.746094 305.046875 428.253906 294.617188 428.253906 284.679688 C 428.753906 276.730469 428.753906 268.78125 429.25 260.835938 C 429.746094 252.390625 432.230469 244.441406 435.707031 236.988281 C 437.695312 233.015625 439.679688 228.542969 441.667969 224.570312 C 442.660156 222.582031 443.65625 220.097656 445.144531 218.109375 C 450.113281 210.164062 458.0625 208.671875 466.011719 212.648438 C 472.46875 216.125 479.421875 219.601562 484.886719 224.570312 C 490.851562 229.539062 495.816406 235.5 499.792969 242.453125 C 504.261719 250.402344 507.742188 258.351562 509.726562 267.292969 C 510.722656 271.765625 511.21875 276.730469 511.714844 281.699219 C 512.210938 286.171875 512.707031 290.640625 512.707031 294.617188 C 512.210938 301.074219 511.714844 307.035156 510.722656 313.492188 C 510.222656 318.460938 509.726562 323.925781 509.230469 328.894531 C 508.734375 338.828125 508.238281 348.765625 507.742188 358.699219 C 512.707031 357.707031 517.179688 356.714844 522.148438 356.214844 C 521.152344 351.25 520.160156 345.785156 519.664062 340.320312 C 518.667969 332.867188 517.675781 325.914062 517.675781 318.460938 C 517.179688 309.023438 516.683594 299.582031 516.683594 290.640625 C 516.683594 282.195312 516.1875 273.75 517.179688 265.304688 C 517.675781 257.855469 519.664062 250.898438 521.648438 243.945312 C 523.140625 237.984375 524.632812 231.523438 528.605469 226.058594 C 530.09375 224.074219 532.082031 221.589844 534.070312 220.097656 C 536.058594 218.609375 539.039062 219.105469 540.527344 221.09375 C 543.507812 224.570312 546.984375 228.542969 549.964844 232.519531 C 553.445312 237.984375 556.425781 243.945312 559.40625 249.410156 C 559.902344 250.898438 560.398438 251.890625 561.394531 253.382812 C 564.375 259.839844 566.359375 266.300781 566.359375 273.253906 C 566.359375 278.222656 566.855469 283.191406 566.855469 288.15625 C 566.855469 296.601562 565.863281 304.550781 563.875 312.5 C 561.394531 322.433594 558.410156 332.371094 556.425781 342.804688 C 554.933594 348.765625 553.941406 355.222656 552.949219 361.679688 C 552.949219 362.675781 554.4375 363.667969 555.929688 364.660156 C 557.417969 365.65625 559.40625 365.65625 560.894531 366.648438 C 569.839844 371.617188 578.78125 376.585938 587.722656 382.050781 C 592.691406 385.527344 598.15625 389.003906 600.140625 395.460938 C 601.136719 399.4375 602.128906 403.410156 603.121094 406.886719 C 604.117188 410.367188 605.109375 412.851562 607.097656 415.832031 C 610.078125 420.300781 612.5625 424.773438 614.546875 429.738281 C 617.527344 438.183594 619.515625 447.128906 622 455.574219 C 622.992188 459.050781 622.992188 463.023438 623.492188 467 C 623.988281 473.953125 622.496094 480.910156 618.027344 486.871094 C 617.03125 488.359375 615.542969 489.355469 614.546875 490.347656 C 613.058594 491.835938 612.5625 493.824219 613.554688 495.316406 C 615.046875 496.804688 616.535156 496.804688 618.523438 495.316406 C 619.019531 494.820312 620.011719 494.320312 621.007812 493.824219 C 621.007812 496.308594 621.007812 497.800781 620.511719 499.785156 C 619.515625 503.761719 619.019531 508.230469 617.527344 511.210938 C 614.050781 517.171875 609.082031 521.148438 601.632812 521.644531 C 596.664062 522.140625 591.695312 522.140625 586.730469 522.140625 C 586.230469 522.140625 585.238281 522.140625 584.246094 521.644531 C 584.742188 523.136719 585.238281 524.625 586.230469 526.117188 C 590.703125 533.566406 592.191406 541.515625 594.179688 549.464844 C 595.175781 554.433594 596.664062 559.398438 597.65625 564.367188 C 598.15625 566.355469 598.15625 568.34375 598.15625 570.328125 C 598.15625 573.808594 598.652344 577.285156 598.652344 581.257812 C 598.652344 585.234375 598.652344 589.703125 598.652344 593.679688 C 598.15625 599.144531 597.65625 604.109375 597.160156 609.574219 C 596.664062 614.046875 596.167969 618.515625 595.175781 622.988281 C 593.1875 630.441406 591.199219 637.890625 588.714844 644.847656 C 585.238281 654.78125 581.265625 664.71875 577.289062 674.652344 C 574.804688 680.613281 572.320312 686.078125 569.839844 692.039062 C 567.851562 696.511719 565.367188 700.984375 563.378906 705.453125 C 558.910156 715.390625 553.941406 724.828125 551.953125 735.757812 C 551.457031 738.738281 550.960938 741.71875 550.960938 744.699219 C 550.464844 748.175781 549.96875 751.15625 549.96875 754.636719 C 549.96875 757.117188 549.96875 760.101562 550.464844 762.582031 C 550.960938 765.5625 551.953125 768.546875 552.449219 771.527344 C 552.949219 774.007812 554.4375 775.996094 554.933594 778.480469 C 556.425781 784.9375 555.929688 790.898438 552.449219 796.363281 C 551.953125 797.359375 550.464844 798.351562 549.46875 798.351562 C 542.515625 799.84375 535.558594 801.828125 528.109375 802.328125 C 523.636719 802.824219 518.667969 802.328125 514.199219 800.835938 C 507.242188 798.847656 500.785156 792.886719 501.28125 782.953125 C 501.777344 774.007812 502.773438 765.5625 502.773438 756.621094 C 502.773438 749.667969 501.28125 743.210938 499.296875 736.75 C 497.804688 731.285156 495.320312 726.320312 493.332031 721.351562 C 492.339844 718.867188 491.347656 718.371094 488.863281 719.859375 C 485.882812 721.351562 482.40625 722.34375 479.921875 723.339844 C 479.921875 736.75 479.921875 750.164062 479.921875 763.578125 C 479.921875 769.539062 479.425781 775.5 479.425781 781.460938 C 479.425781 786.429688 478.429688 791.398438 474.953125 795.371094 C 470.980469 799.84375 466.011719 801.828125 460.546875 802.328125 C 453.589844 802.824219 447.132812 803.320312 440.179688 802.824219 C 429.746094 801.828125 422.789062 793.882812 423.289062 783.449219 C 423.289062 781.460938 425.273438 779.972656 426.269531 777.984375 C 427.261719 776.992188 430.242188 773.511719 431.234375 772.023438 C 430.242188 771.527344 429.746094 772.023438 427.757812 772.519531 Z M 427.757812 772.519531 " fill-opacity="1" fill-rule="nonzero"/><path fill="#202020" d="M 592.191406 471.964844 C 597.160156 473.953125 601.632812 475.445312 606.101562 476.933594 C 611.566406 478.921875 617.03125 479.417969 622 475.941406 C 623.492188 478.921875 621.503906 483.394531 618.523438 485.875 C 612.066406 491.339844 609.582031 490.347656 605.109375 487.863281 C 600.636719 485.378906 597.160156 480.410156 594.179688 475.941406 C 593.1875 475.445312 592.691406 473.953125 592.191406 471.964844 Z M 549.964844 428.746094 C 549.964844 427.257812 549.964844 425.765625 549.964844 423.777344 C 549.46875 417.816406 547.980469 412.851562 542.019531 409.867188 C 536.554688 406.886719 530.59375 406.390625 524.632812 407.386719 C 523.636719 407.386719 522.644531 408.378906 522.148438 408.875 C 520.65625 410.863281 519.664062 413.347656 518.667969 415.832031 C 515.6875 423.777344 517.179688 430.238281 522.644531 434.707031 C 527.113281 438.1875 532.578125 438.683594 538.042969 438.1875 C 540.527344 437.6875 543.507812 437.6875 545.992188 437.6875 C 548.476562 437.6875 549.46875 436.695312 549.46875 434.210938 C 549.964844 432.722656 549.964844 430.734375 549.964844 428.746094 Z M 549.964844 428.746094 " fill-opacity="1" fill-rule="nonzero"/><path fill="#ffffff" d="M 527.613281 517.175781 C 510.222656 517.671875 489.855469 512.703125 474.953125 504.257812 C 461.042969 496.308594 451.605469 482.398438 449.121094 466.503906 C 448.125 461.535156 446.140625 450.109375 454.585938 450.109375 C 458.0625 450.109375 463.527344 453.585938 466.507812 455.078125 C 470.980469 457.0625 474.953125 460.042969 478.925781 463.023438 C 492.835938 473.457031 505.753906 484.882812 523.636719 487.367188 C 527.113281 487.863281 536.554688 489.355469 539.535156 486.375 C 541.523438 484.386719 541.523438 480.410156 542.515625 477.929688 C 544.003906 474.449219 545.992188 471.46875 548.476562 468.488281 C 560.398438 455.574219 577.785156 454.578125 589.210938 468.984375 C 591.695312 471.964844 592.191406 474.449219 596.167969 479.914062 C 600.140625 485.378906 605.109375 489.355469 606.601562 489.851562 C 616.039062 492.832031 619.515625 482.398438 620.507812 476.933594 C 622.992188 467.496094 627.464844 473.953125 629.949219 479.417969 C 632.929688 486.375 631.4375 496.804688 627.464844 503.265625 C 623.492188 509.722656 615.542969 516.675781 609.582031 520.652344 C 602.128906 525.621094 593.683594 527.109375 584.742188 525.621094 C 580.269531 524.625 575.300781 523.136719 570.832031 522.636719 C 566.359375 522.140625 561.890625 522.636719 556.921875 521.644531 C 551.457031 520.15625 546.984375 516.675781 541.519531 516.675781 C 538.042969 516.179688 532.578125 516.675781 527.613281 517.175781 Z M 527.613281 517.175781 " fill-opacity="1" fill-rule="nonzero"/><path fill="#ffffff" d="M 494.328125 724.332031 C 492.339844 719.363281 491.84375 717.375 486.378906 719.859375 C 480.417969 722.34375 475.945312 723.835938 474.457031 715.886719 C 471.972656 703.964844 477.4375 690.054688 480.914062 678.628906 C 488.367188 654.285156 497.804688 632.925781 516.683594 615.535156 C 528.605469 604.609375 559.40625 575.296875 576.296875 590.699219 C 584.742188 598.644531 581.265625 611.5625 577.289062 620.503906 C 572.320312 632.925781 563.875 643.851562 556.425781 655.277344 C 547.980469 668.195312 538.539062 679.125 528.109375 690.054688 C 517.179688 701.976562 506.746094 713.898438 494.328125 724.332031 Z M 494.328125 724.332031 " fill-opacity="1" fill-rule="nonzero"/><path fill="#ffffff" d="M 533.078125 420.300781 C 533.078125 413.347656 542.515625 413.84375 542.019531 420.300781 C 541.023438 426.261719 533.078125 426.261719 533.078125 420.300781 Z M 533.078125 420.300781 " fill-opacity="1" fill-rule="nonzero"/><path fill="#ffffff" d="M 528.605469 416.824219 C 532.082031 416.824219 531.585938 422.289062 528.605469 421.792969 C 525.128906 421.792969 525.625 416.328125 528.605469 416.824219 Z M 528.605469 416.824219 " fill-opacity="1" fill-rule="nonzero"/><g clip-path="url(#e52743be2c)"><g mask="url(#42ff1de6b4)"><g transform="matrix(1, 0, 0, 1, 264, 207)"><g clip-path="url(#ac030cb0c4)"><path fill="#000000" d="M 238.277344 86.125 C 237.777344 97.054688 235.296875 107.488281 231.816406 117.421875 C 227.84375 129.84375 223.867188 141.765625 219.894531 154.183594 C 218.902344 157.660156 218.40625 161.636719 217.410156 165.609375 C 216.914062 167.101562 216.914062 169.089844 214.429688 169.089844 C 212.441406 169.089844 211.945312 167.101562 211.945312 165.609375 C 211.449219 154.679688 208.46875 144.25 204.496094 134.3125 C 202.011719 128.847656 198.535156 123.382812 195.550781 117.917969 C 191.578125 110.964844 187.105469 104.507812 183.132812 97.054688 C 178.164062 88.113281 176.179688 78.671875 175.679688 68.738281 C 175.183594 56.816406 177.171875 45.886719 180.648438 34.460938 C 182.636719 28.5 185.121094 22.539062 188.101562 16.574219 C 189.589844 13.097656 193.070312 11.609375 196.546875 13.59375 C 205.488281 18.066406 212.941406 23.53125 218.902344 31.976562 C 220.390625 34.460938 222.378906 36.449219 223.867188 38.929688 C 230.328125 46.878906 234.300781 55.820312 235.296875 66.253906 C 236.289062 72.710938 237.28125 79.667969 238.277344 86.125 Z M 238.277344 86.125 " fill-opacity="1" fill-rule="nonzero"/><path fill="#000000" d="M 290.4375 155.675781 C 289.445312 155.675781 288.949219 155.179688 287.953125 155.179688 C 281 151.699219 273.546875 150.707031 266.09375 149.214844 C 264.109375 148.71875 262.121094 148.222656 259.636719 148.222656 C 258.148438 148.222656 257.648438 147.726562 257.648438 146.234375 C 256.160156 132.324219 253.179688 118.914062 253.179688 104.507812 C 253.179688 97.054688 252.683594 89.105469 252.1875 81.65625 C 252.1875 73.210938 251.6875 64.765625 252.683594 56.320312 C 253.179688 48.867188 255.167969 41.910156 257.152344 34.460938 C 258.644531 28.5 260.132812 22.539062 263.613281 17.570312 C 265.101562 15.085938 266.59375 12.601562 269.574219 11.113281 C 272.058594 9.621094 275.039062 10.613281 276.527344 12.105469 C 279.507812 15.582031 282.984375 19.558594 285.964844 23.53125 C 289.445312 28.996094 292.425781 34.957031 295.40625 40.421875 C 295.902344 41.414062 296.398438 42.410156 296.398438 43.402344 C 299.875 49.859375 301.863281 57.3125 302.359375 64.765625 C 302.359375 70.726562 303.355469 77.183594 302.855469 83.144531 C 302.359375 90.101562 301.367188 97.054688 299.875 103.511719 C 297.394531 113.449219 294.910156 123.382812 292.425781 133.816406 C 290.933594 139.777344 289.941406 146.234375 288.949219 152.695312 C 288.449219 153.191406 289.941406 154.183594 290.4375 155.675781 Z M 290.4375 155.675781 " fill-opacity="1" fill-rule="nonzero"/><path fill="#000000" d="M 334.15625 386.679688 C 331.671875 381.710938 329.683594 377.238281 326.703125 372.769531 C 321.238281 363.328125 313.785156 355.382812 304.347656 349.917969 C 294.910156 344.453125 284.476562 339.484375 274.042969 336.007812 C 263.613281 332.527344 253.179688 328.554688 243.242188 324.582031 C 226.851562 317.625 213.933594 306.199219 202.507812 293.285156 C 201.515625 292.289062 201.015625 291.296875 200.023438 289.804688 C 202.011719 290.800781 203.003906 290.800781 204.496094 291.792969 C 212.941406 295.765625 222.378906 298.25 231.320312 299.742188 C 238.773438 300.734375 246.222656 301.230469 253.675781 301.730469 C 256.160156 301.730469 258.148438 301.230469 260.632812 301.230469 C 270.566406 300.734375 279.507812 303.714844 288.449219 307.691406 C 294.910156 310.671875 301.863281 313.652344 309.316406 314.644531 C 313.289062 315.140625 317.265625 316.632812 320.742188 318.121094 C 322.730469 319.117188 323.722656 321.601562 324.21875 324.082031 C 327.199219 332.527344 328.191406 338.492188 330.179688 345.445312 C 333.65625 356.871094 334.15625 364.324219 334.15625 374.257812 C 334.15625 377.734375 334.15625 382.207031 334.15625 386.679688 Z M 334.15625 386.679688 " fill-opacity="1" fill-rule="nonzero"/><path fill="#000000" d="M 233.804688 525.777344 C 231.320312 520.3125 229.332031 512.859375 227.347656 512.363281 C 234.300781 508.390625 240.261719 500.9375 245.726562 495.472656 C 256.160156 485.039062 266.09375 474.609375 276.03125 464.175781 C 283.980469 455.234375 291.429688 446.292969 299.378906 436.851562 C 299.875 436.355469 300.871094 435.859375 301.367188 434.867188 C 301.863281 434.867188 301.863281 434.867188 302.359375 435.363281 C 302.359375 436.355469 302.359375 437.351562 301.863281 438.34375 C 298.882812 443.3125 295.40625 448.277344 291.929688 453.246094 C 280.503906 469.144531 267.585938 484.046875 253.675781 497.957031 C 246.222656 505.410156 239.269531 514.351562 234.796875 524.285156 C 234.796875 524.785156 234.300781 525.28125 233.804688 525.777344 Z M 233.804688 525.777344 " fill-opacity="1" fill-rule="nonzero"/><path fill="#000000" d="M 56.949219 489.511719 C 74.335938 504.914062 83.28125 515.34375 102.65625 526.769531 C 122.027344 538.195312 155.808594 543.660156 159.785156 544.65625 C 163.757812 545.152344 164.753906 544.65625 165.25 546.640625 C 166.738281 552.105469 168.726562 557.074219 167.234375 562.539062 C 166.738281 565.023438 165.746094 565.519531 163.261719 565.519531 C 159.289062 566.015625 157.300781 566.015625 154.320312 566.511719 C 150.34375 567.011719 146.867188 566.511719 143.390625 565.023438 C 139.417969 563.53125 137.429688 560.054688 137.429688 556.082031 C 137.429688 554.09375 137.429688 551.113281 137.429688 549.125 C 137.429688 548.628906 107.621094 549.621094 94.210938 538.691406 C 71.855469 520.3125 56.949219 490.007812 56.949219 489.511719 Z M 56.949219 489.511719 " fill-opacity="1" fill-rule="nonzero"/><path fill="#000000" d="M 352.039062 280.863281 C 351.542969 281.359375 351.046875 281.855469 350.546875 281.855469 C 349.554688 282.355469 348.5625 282.355469 347.566406 282.851562 C 347.070312 282.851562 346.574219 283.84375 346.574219 283.84375 C 347.566406 287.320312 345.582031 290.800781 344.585938 294.277344 C 343.097656 298.746094 344.585938 301.230469 349.058594 302.722656 C 350.050781 302.722656 350.546875 303.21875 352.039062 303.21875 C 351.046875 303.714844 350.546875 304.210938 350.050781 304.210938 C 348.0625 304.210938 346.078125 304.210938 344.089844 304.210938 C 343.097656 304.210938 342.101562 303.21875 342.101562 302.722656 C 341.109375 300.734375 339.621094 300.734375 337.632812 301.730469 C 332.167969 303.714844 326.703125 304.210938 321.238281 303.714844 C 314.78125 303.21875 308.820312 301.230469 302.855469 300.238281 C 301.863281 300.238281 300.871094 299.246094 300.375 298.746094 C 300.375 298.746094 300.375 298.25 300.871094 298.25 C 301.367188 298.25 301.863281 297.753906 302.359375 298.25 C 310.308594 300.238281 318.753906 299.742188 326.703125 299.246094 C 330.675781 299.246094 334.652344 297.257812 338.625 296.265625 C 340.613281 295.765625 341.605469 294.277344 342.101562 292.289062 C 342.601562 289.308594 342.601562 286.328125 343.097656 282.851562 C 343.097656 282.355469 342.601562 281.359375 341.605469 280.863281 C 340.117188 279.871094 338.625 278.875 337.632812 277.386719 C 336.140625 275.894531 334.652344 273.910156 333.65625 272.417969 C 338.128906 277.386719 343.59375 282.355469 352.039062 280.863281 Z M 352.039062 280.863281 " fill-opacity="1" fill-rule="nonzero"/><path fill="#000000" d="M 215.921875 546.640625 C 213.933594 542.667969 211.945312 538.695312 209.960938 535.214844 C 206.980469 529.253906 203.003906 527.765625 196.050781 523.292969 C 195.054688 522.796875 177.667969 509.382812 176.675781 508.390625 C 138.421875 474.609375 185.617188 507.394531 191.578125 509.878906 C 197.539062 512.363281 207.476562 516.339844 213.4375 515.34375 C 214.925781 514.847656 215.921875 514.351562 215.921875 515.839844 C 216.417969 525.777344 215.921875 536.210938 216.417969 546.144531 C 215.921875 546.144531 215.921875 546.144531 215.921875 546.640625 Z M 215.921875 546.640625 " fill-opacity="1" fill-rule="nonzero"/><path fill="#000000" d="M 1.808594 473.613281 C 2.304688 478.085938 2.800781 482.558594 3.792969 486.53125 C 5.78125 496.964844 9.257812 506.402344 15.222656 515.34375 C 18.699219 520.3125 22.175781 525.28125 25.652344 529.75 C 28.632812 533.230469 32.113281 536.707031 36.085938 540.183594 C 38.074219 542.171875 40.558594 543.660156 42.542969 545.648438 C 41.550781 546.144531 41.054688 546.640625 40.558594 547.136719 C 38.570312 548.628906 37.078125 550.121094 35.09375 551.609375 C 31.613281 553.597656 29.628906 556.578125 28.632812 560.550781 C 28.136719 563.035156 28.136719 565.023438 29.628906 567.507812 C 34.097656 573.964844 40.558594 575.953125 48.007812 575.953125 C 53.96875 575.953125 59.929688 575.457031 65.890625 574.957031 C 74.835938 574.460938 83.28125 573.964844 92.222656 573.964844 C 94.210938 573.964844 96.195312 573.964844 98.183594 573.964844 C 106.628906 573.964844 114.082031 568.003906 116.066406 559.558594 C 117.0625 555.582031 117.0625 551.609375 117.558594 547.636719 C 119.546875 547.636719 121.53125 548.132812 123.023438 548.132812 C 121.035156 546.640625 118.550781 545.152344 115.074219 544.65625 C 107.621094 543.164062 97.191406 541.175781 84.769531 536.707031 C 58.441406 527.265625 25.15625 509.382812 1.808594 473.613281 Z M 1.808594 473.613281 " fill-opacity="1" fill-rule="nonzero"/><path fill="#000000" d="M 59.433594 525.28125 C 78.3125 535.710938 89.738281 537.203125 81.789062 526.273438 C 75.332031 517.332031 106.132812 546.144531 106.132812 546.144531 L 66.390625 543.164062 Z M 59.433594 525.28125 " fill-opacity="1" fill-rule="nonzero"/></g></g></g></g></svg>
+  </div>
+  <div class="scroll-cue"><div class="scroll-line"></div>scroll</div>
+</section>
+
+<!-- ── CHAPTER 1 ─────────────────────────────────────────── -->
+<div id="ch1"></div>
+<div class="chapter-banner" id="chapter-banner"><span class="cb-num" id="cb-num">01</span><span class="cb-title" id="cb-title">How you use <em>Central Park</em></span></div>
+<div class="scrolly">
+  <div class="scrolly-map">
+    <div class="map-tag" id="htag">All park zones · human foot traffic intensity</div>
+    <div class="map-box" id="hmap"></div>
+    <div class="map-footer">
+      <div class="map-legend" id="hlegend">
+        <div class="leg-row"><div class="leg-rect" style="background:#8b0000;opacity:.9"></div>Extreme &gt;500k/acre</div>
+        <div class="leg-row"><div class="leg-rect" style="background:#e05c26;opacity:.85"></div>Very high</div>
+        <div class="leg-row"><div class="leg-rect" style="background:#e8a92a;opacity:.85"></div>High</div>
+        <div class="leg-row"><div class="leg-rect" style="background:#b8d46a;opacity:.85"></div>Medium</div>
+        <div class="leg-row"><div class="leg-rect" style="background:#78b87a;opacity:.85"></div>Low</div>
+      </div>
+      <div class="map-src">Central Park Conservancy · CPC Visitor Survey 2009</div>
+    </div>
+  </div>
+  <div class="steps-col" id="steps-humans">
+    <div class="step active" data-step="0">
+      <div class="eyebrow">Chapter 1 · Human Geography</div>
+      <h3>A park divided by <em>footfall</em>.</h3>
+      <p>Central Park hosts 22 million visitors a year — but they don't distribute evenly. The CPC Visitor Survey reveals stark intensity gradients driven by transit access, landmarks, and hotel proximity.</p>
+      <div class="stat-row"><div class="stat-n">22M</div><div class="stat-l">Annual visitors to Central Park</div></div>
+    </div>
+    <div class="step" data-step="1">
+      <div class="eyebrow">The Southern Gravity</div>
+      <h3>You arrive from the <em>south</em>.</h3>
+      <p>The Wollman Rink, Southwest Corner, and the Zoo receive over 500,000 visits per acre per year — the highest density in the park. Three subway lines and the Plaza Hotel funnel an extraordinary concentration of foot traffic through the southeast corner.</p>
+      <div class="stat-row"><div class="stat-n">58%</div><div class="stat-l">Of visits enter south of 72nd Street</div></div>
+    </div>
+    <div class="step" data-step="2">
+      <div class="eyebrow">The Gradient</div>
+      <h3>Foot traffic <em>fades northward</em>.</h3>
+      <p>Moving north of 72nd Street, intensity drops dramatically. The Great Lawn and Reservoir receive moderate traffic. Above 86th Street, the North Woods and Great Hill see a fraction of the southern density.</p>
+      <blockquote class="pull">"The southern third of the park accounts for a majority of all visits, while northern zones remain relatively quiet." <cite>— CPC Visitor Survey, 2009</cite></blockquote>
+    </div>
+    <div class="step" data-step="3">
+      <div class="eyebrow">The Quiet North</div>
+      <h3>Above 86th — <em>a different world</em>.</h3>
+      <p>Harlem Meer, the Great Hill, and the North Woods exist in a different register entirely. Low intensity means different behavior from every living thing in the park — including the squirrels who live there year-round.</p>
+      <div class="stat-row"><div class="stat-n">4×</div><div class="stat-l">Fewer visitors per acre above 86th Street vs southern zones</div></div>
+    </div>
   </div>
 </div>
 
-<div class="app">
+<!-- ── CHAPTER 2 ─────────────────────────────────────────── -->
+<div id="ch2"></div>
 
-  <!-- MAP PANEL -->
-  <div class="panel on" id="pmap" style="flex-direction:row">
-    <div class="sidebar" id="sidebar">
-
-      <div class="sb-section">
-        <div class="sb-label">Layers</div>
-        <div class="layer-row on" id="lr-sq" onclick="toggleLayer('sq')">
-          <div class="toggle on" id="tg-sq"></div>
-          <span class="clr-swatch" style="background:var(--red)"></span>
-          Squirrel sightings
-        </div>
-        <div class="layer-row on" id="lr-heat" onclick="toggleLayer('heat')">
-          <div class="toggle on" id="tg-heat"></div>
-          <span class="clr-swatch" style="background:var(--red);opacity:0.4;border-radius:0"></span>
-          Behavior heatmap
-        </div>
-        <div class="layer-row on" id="lr-human" onclick="toggleLayer('human')">
-          <div class="toggle on" id="tg-human"></div>
-          <span class="clr-swatch" style="background:var(--blue)"></span>
-          Human foot traffic
-        </div>
-        <div class="fur-row" style="margin-top:0.4rem; padding-left: 2rem;">
-          <button class="fp on" id="tm-intensity" onclick="setTrafficMode('intensity')">By Intensity</button>
-          <button class="fp" id="tm-volume" onclick="setTrafficMode('volume')">By Volume</button>
-        </div>
+<div class="scrolly flip">
+  <div class="scrolly-map">
+    <div class="map-tag" id="stag">All 3,023 sightings · colored by behavior</div>
+    <div class="map-box" id="smap"></div>
+    <div class="map-footer">
+      <div class="map-legend" id="slegend">
+        <div class="leg-row"><div class="leg-dot" style="background:#c94c3a"></div>Flees</div>
+        <div class="leg-row"><div class="leg-dot" style="background:#2d7a4f"></div>Approaches</div>
+        <div class="leg-row"><div class="leg-dot" style="background:#2b5fa0"></div>Indifferent</div>
+        <div class="leg-row"><div class="leg-dot" style="background:#b86a12"></div>Foraging</div>
+        <div class="leg-row"><div style="width:16px;height:6px;border-radius:2px;background:linear-gradient(to right,#78b87a,#e8a92a,#8b0000);flex-shrink:0"></div>Human traffic</div>
       </div>
-
-      <div class="sb-section">
-        <div class="sb-label">Behavior</div>
-        <div class="beh-grid">
-          <button class="bb on" id="bb-runs_from" onclick="setBeh('runs_from')">Flees humans</button>
-          <button class="bb" id="bb-approaches" onclick="setBeh('approaches')">Approaches</button>
-          <button class="bb" id="bb-indifferent" onclick="setBeh('indifferent')">Indifferent</button>
-          <button class="bb" id="bb-foraging" onclick="setBeh('foraging')">Foraging</button>
-          <button class="bb" id="bb-eating" onclick="setBeh('eating')">Eating</button>
-          <button class="bb" id="bb-climbing" onclick="setBeh('climbing')">Climbing</button>
-          <button class="bb" id="bb-running" onclick="setBeh('running')">Running</button>
-          <button class="bb" id="bb-kuks" onclick="setBeh('kuks')">Alarm calls</button>
-        </div>
-      </div>
-
-      <div class="sb-section">
-        <div class="sb-label">Fur color</div>
-        <div class="fur-row">
-          <button class="fp on" id="fp-all" onclick="setFur('all')">All</button>
-          <button class="fp" id="fp-G" onclick="setFur('G')">Gray</button>
-          <button class="fp" id="fp-C" onclick="setFur('C')">Cinnamon</button>
-          <button class="fp" id="fp-B" onclick="setFur('B')">Black</button>
-        </div>
-      </div>
-
-      <div class="sb-section" style="border-bottom:none">
-        <div class="sb-label">Stats</div>
-        <div class="stat-grid">
-          <div class="sc">
-            <div class="sc-val" id="sv1" style="color:var(--red)">0</div>
-            <div class="sc-lbl" id="sl1">squirrels fleeing humans</div>
-          </div>
-          <div class="sc">
-            <div class="sc-val" id="sv2" style="color:var(--dark)">0%</div>
-            <div class="sc-lbl" id="sl2">flee rate (all sightings)</div>
-          </div>
-          <div class="sc">
-            <div class="sc-val" id="sv3" style="color:var(--green)">0</div>
-            <div class="sc-lbl">approached humans willingly</div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-
-    <div class="map-panel">
-      <div id="map"></div>
-
-      <div class="map-legend" id="map-legend">
-        <div class="leg-title" id="leg-title">Behavior: Flees humans</div>
-        <div id="leg-body"></div>
-      </div>
-
-      <div class="src-note">
-        Map: © OpenStreetMap  Foot traffic: Central Park Conservancy 2009  Squirrels: NYC 2018 Census
-      </div>
+      <div class="map-src">2018 NYC Squirrel Census · CPC 2009</div>
     </div>
   </div>
+  <div class="steps-col" id="steps-squirrels">
+    <div class="step active" data-step="0">
+      <div class="eyebrow">Chapter 2 · Squirrel Geography</div>
+      <h3>3,023 squirrels, <em>one October</em>.</h3>
+      <p>Volunteer spotters covered every hectare of the park over 10 days. Unlike humans, squirrel sightings distribute relatively evenly — but their behavior varies sharply across the same gradient.</p>
+      <div class="stat-row"><div class="stat-n">3,023</div><div class="stat-l">Sightings across 10 October survey days</div></div>
+    </div>
+    <div class="step" data-step="1">
+      <div class="eyebrow">The Approach Zone</div>
+      <h3>Southern squirrels <em>approach humans</em>.</h3>
+      <p>In the high-traffic southern zones, squirrels have been desensitized — and often actively trained by handfeeding. The approach rate in the south is 4× higher than in the quiet north.</p>
+      <div class="stat-row"><div class="stat-n">4×</div><div class="stat-l">More likely to approach in high-traffic southern zones</div></div>
+    </div>
+    <div class="step" data-step="2">
+      <div class="eyebrow">The Flight Zone</div>
+      <h3>Northern squirrels <em>flee the scene</em>.</h3>
+      <p>In low-traffic northern zones — North Woods, Harlem Meer — squirrels treat humans as genuine threats. The flee rate in the north is significantly higher than the park-wide average.</p>
+      <blockquote class="pull">"The squirrel is the same animal. But the behavioral profile is shaped entirely by how many humans it has encountered." <cite>— NYC Squirrel Census field notes</cite></blockquote>
+    </div>
+    <div class="step" data-step="3">
+      <div class="eyebrow">The Full Picture</div>
+      <h3>All behaviors, <em>all at once</em>.</h3>
+      <p>With all behavioral categories shown simultaneously, the spatial patterning becomes clear. The human intensity gradient is a near-perfect predictor of squirrel behavioral response.</p>
+      <div class="stat-row"><div class="stat-n">48%</div><div class="stat-l">Of squirrels simply indifferent to human presence</div></div>
+    </div>
+  </div>
+</div>
 
-  <!-- CHART PANEL -->
-  <div class="panel" id="pcharts">
-    <div class="chart-panel">
-      <div class="cp-inner">
+<!-- ── CHAPTER 3 ─────────────────────────────────────────── -->
+<div id="ch3"></div>
+<div class="chapter-mark reveal">
+  <div class="ch-num">3</div>
+  <div><div class="ch-label">Behavioral Analysis</div><h2>Eight behaviors, <em>one census</em></h2></div>
+</div>
+<div class="charts-section">
+  <div class="chart-card reveal">
+    <div class="cc-head">
+      <div class="cc-eyebrow">North vs. South</div>
+      <div class="cc-title">Behavior rates by park zone</div>
+      <div class="cc-sub">Percentage of squirrels exhibiting each behavior, split by park zone. The gap between bars tells the story.</div>
+      <div class="cc-legend">
+        <div class="cc-leg"><div class="cc-dot" style="background:#5A6A2A"></div>North Park</div>
+        <div class="cc-leg"><div class="cc-dot" style="background:#A8421A"></div>South Park</div>
+      </div>
+    </div>
+    <div class="chart-canvas-wrap" style="height:clamp(240px,32vh,320px)"><canvas id="chart-nsbar"></canvas></div>
+  </div>
+  <div class="chart-card reveal">
+    <div class="cc-head">
+      <div class="cc-eyebrow">The Behavioral Divide</div>
+      <div class="cc-title">South Park minus North Park (percentage points)</div>
+      <div class="cc-sub">Positive = more common in the high-traffic south. Negative = more common in the quiet north.</div>
+    </div>
+    <div class="chart-canvas-wrap" style="height:clamp(220px,28vh,280px)"><canvas id="chart-diverge"></canvas></div>
+  </div>
+  <div class="ratio-grid reveal" id="ratio-grid"></div>
+</div>
 
-        <div class="insight-strip">
-          <div class="ik"><div class="ik-num" id="ins-flee" style="color:var(--red)">0%</div><div class="ik-lbl">flee from human encounters</div></div>
-          <div class="ik"><div class="ik-num" id="ins-indif" style="color:var(--dark)">0%</div><div class="ik-lbl">indifferent to humans</div></div>
-          <div class="ik"><div class="ik-num" id="ins-appr" style="color:var(--green)">0%</div><div class="ik-lbl">actively approach humans</div></div>
-          <div class="ik"><div class="ik-num" id="ins-forage" style="color:var(--amber)">0%</div><div class="ik-lbl">observed foraging</div></div>
-          <div class="ik"><div class="ik-num" style="color:var(--blue)">37.5M</div><div class="ik-lbl">annual park visits by humans</div></div>
-          <div class="ik"><div class="ik-num" id="ins-south" style="color:var(--purple)">0×</div><div class="ik-lbl">higher flee rate in south vs north</div></div>
-        </div>
-
-        <div class="chart-row">
-          <div class="cc">
-            <h4>Response to human presence</h4>
-            <div style="position:relative;height:200px"><canvas id="ch1" role="img">Loading chart...</canvas></div>
-            <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:0.8rem">
-              <span style="display:flex;align-items:center;gap:5px;font-size:0.7rem;color:var(--mid)"><span style="width:9px;height:9px;border-radius:2px;background:#c94c3a"></span>Flees</span>
-              <span style="display:flex;align-items:center;gap:5px;font-size:0.7rem;color:var(--mid)"><span style="width:9px;height:9px;border-radius:2px;background:#2d2a26"></span>Indifferent</span>
-              <span style="display:flex;align-items:center;gap:5px;font-size:0.7rem;color:var(--mid)"><span style="width:9px;height:9px;border-radius:2px;background:#2d7a4f"></span>Approaches</span>
-              <span style="display:flex;align-items:center;gap:5px;font-size:0.7rem;color:var(--mid)"><span style="width:9px;height:9px;border-radius:2px;background:#e8e1d8"></span>Other</span>
-            </div>
+<!-- ── CHAPTER 4 ─────────────────────────────────────────── -->
+<div id="ch4"></div>
+<div class="chapter-mark reveal">
+  <div class="ch-num">4</div>
+  <div><div class="ch-label">The Divide</div><h2>North vs. South — <em>two different parks</em></h2></div>
+</div>
+<div class="compare-section">
+  <div class="compare-inner">
+    <div class="compare-hdr reveal">
+      <div>
+        <h5>The core finding</h5>
+        <h3>Same species, same park — different behavior.</h3>
+        <p>The south's high-traffic zones have produced a socialized, food-conditioned squirrel. The north's quiet zones have not. Filter the maps by behavior to see the divide.</p>
+      </div>
+      <div>
+        <h5>Filter by behavior</h5>
+        <div class="beh-filters" id="compare-filters"></div>
+      </div>
+    </div>
+    <div class="compare-maps">
+      <div class="cmap">
+        <div class="cmap-hdr"><span class="ctitle">🌲 North Park · above 72nd St</span><span class="cbadge" id="north-badge">—</span></div>
+        <div class="cmap-body" id="north-map"></div>
+        <div class="cmap-stats" id="north-stats"></div>
+      </div>
+      <div class="cmap">
+        <div class="cmap-hdr"><span class="ctitle">🏙 South Park · below 72nd St</span><span class="cbadge" id="south-badge">—</span></div>
+        <div class="cmap-body" id="south-map"></div>
+        <div class="cmap-stats" id="south-stats"></div>
+      </div>
+    </div>
+    <div class="compare-charts reveal">
+      <div class="chart-card">
+        <div class="cc-head">
+          <div class="cc-eyebrow">Full breakdown</div>
+          <div class="cc-title">All behaviors · North vs South</div>
+          <div class="cc-legend">
+            <div class="cc-leg"><div class="cc-dot" style="background:#5A6A2A"></div>North</div>
+            <div class="cc-leg"><div class="cc-dot" style="background:#A8421A"></div>South</div>
           </div>
-          <div class="cc">
-            <h4>Activity counts</h4>
-            <div style="position:relative;height:200px"><canvas id="ch2" role="img">Activity counts</canvas></div>
-          </div>
         </div>
-
-        <div class="corr-block">
-          <h4>Flee rate vs annual human visits by park zone (Conservancy entrance data, 2009)</h4>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 1.5rem" id="corr-rows"></div>
-          <p style="font-size:0.73rem;color:var(--mid);margin-top:1rem;line-height:1.7">
-            <strong style="color:var(--dark)">Key finding:</strong> Zones receiving 4M+ annual visits (Wollman Rink, SW Corner/Merchants Gate, Great Lawn) show flee rates 2.5 to 3× higher than quieter northern zones. The pattern suggests sustained human density creates two distinct squirrel populations: a habituated majority (indifferent) and a stress-conditioned minority that flees immediately. Both the 2018 Census and 2009 Conservancy survey point to the same southern concentration of activity as the driver.
-          </p>
+        <div class="chart-canvas-wrap" style="height:clamp(200px,26vh,260px)"><canvas id="chart-compare-bar"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="cc-head">
+          <div class="cc-eyebrow">Relative likelihood</div>
+          <div class="cc-title">South ÷ North ratio</div>
+          <div class="cc-sub" style="font-size:11px">How many times more likely in south. &gt;1 = south-skewed.</div>
         </div>
-
-        <div class="chart-row">
-          <div class="cc">
-            <h4>Behavior by fur color</h4>
-            <div style="position:relative;height:200px"><canvas id="ch3" role="img">Behavior by fur color</canvas></div>
-            <div style="display:flex;gap:12px;margin-top:0.8rem">
-              <span style="display:flex;align-items:center;gap:5px;font-size:0.7rem;color:var(--mid)"><span style="width:9px;height:9px;border-radius:2px;background:#c94c3a"></span>Flees</span>
-              <span style="display:flex;align-items:center;gap:5px;font-size:0.7rem;color:var(--mid)"><span style="width:9px;height:9px;border-radius:2px;background:#2d7a4f"></span>Approaches</span>
-              <span style="display:flex;align-items:center;gap:5px;font-size:0.7rem;color:var(--mid)"><span style="width:9px;height:9px;border-radius:2px;background:#2b5fa0"></span>Indifferent</span>
-            </div>
-          </div>
-          <div class="cc">
-            <h4>AM vs PM sightings by behavior</h4>
-            <div style="position:relative;height:200px"><canvas id="ch4" role="img">AM vs PM behavior</canvas></div>
-            <div style="display:flex;gap:12px;margin-top:0.8rem">
-              <span style="display:flex;align-items:center;gap:5px;font-size:0.7rem;color:var(--mid)"><span style="width:9px;height:9px;border-radius:2px;background:#c94c3a"></span>AM shift</span>
-              <span style="display:flex;align-items:center;gap:5px;font-size:0.7rem;color:var(--mid)"><span style="width:9px;height:9px;border-radius:2px;background:#2b5fa0"></span>PM shift</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="src-info">
-          <strong>About the data:</strong> This application uses the original datasets from the <strong>2018 NYC Squirrel Census</strong> and the <strong>2009 Central Park Conservancy Visitor Survey</strong>.
-        </div>
-
+        <div class="chart-canvas-wrap" style="height:clamp(200px,26vh,260px)"><canvas id="chart-ratio"></canvas></div>
       </div>
     </div>
   </div>
 </div>
+
+<!-- ── CHAPTER 5 ─────────────────────────────────────────── -->
+<div id="ch5"></div>
+<div class="chapter-mark reveal">
+  <div class="ch-num">5</div>
+  <div><div class="ch-label">Free Exploration</div><h2>Explore <em>for yourself</em></h2></div>
+</div>
+<div class="explore-section">
+  <div class="explore-head reveal">
+    <h2>Every sighting, <em>on the map</em>.</h2>
+    <p>All 3,023 sightings from the 2018 NYC Squirrel Census with human traffic zones as context. Filter by behavior, hover to inspect individual squirrels.</p>
+  </div>
+  <div class="explore-layout">
+    <div class="epanel">
+      <h5>Behavior Layers</h5>
+      <div id="explore-filters"></div>
+      <h5>Map Layers</h5>
+      <div class="etog on" id="tog-human" onclick="toggleLayer('human',this)"><div class="tsw"></div>Human traffic</div>
+      <div class="etog on" id="tog-sq" onclick="toggleLayer('sq',this)"><div class="tsw"></div>Squirrel sightings</div>
+      <h5>Data</h5>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink-m);line-height:1.7;margin-top:2px">2018 NYC Squirrel Census<br>323 volunteer spotters<br>10 October survey days<br>842 acres mapped</div>
+    </div>
+    <div><div id="explore-map"></div></div>
+    <div class="epanel right">
+      <h5>Live Count</h5>
+      <div class="estat"><div class="ev" id="ev1">—</div><div class="ek">Sightings visible</div></div>
+      <div class="estat"><div class="ev" id="ev2">—</div><div class="ek">S. Park approaches</div></div>
+      <div class="estat"><div class="ev" id="ev3">—</div><div class="ek">N. Park flees</div></div>
+      <h5>Hovered Squirrel</h5>
+      <div id="ehover" style="font-family:'IBM Plex Mono',monospace;font-size:10px;line-height:1.65;color:var(--ink-m)">Hover a dot on the map.</div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <b>— fin —</b>
+  Data · 2018 NYC Squirrel Census · CPC Visitor Survey 2009 · OpenStreetMap / CartoDB<br>
+  Zone boundaries: Central Park Conservancy · All 3,023 sightings plotted with original GPS coordinates.
+</footer>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
-let SQ = [];
-let VOLUME_DATA = [];
-let INTENSITY_DATA = [];
-let ZONE_DATA = null;
-let HECTARE_DATA = null;
-let humanLayerContainer = L.layerGroup();
-let heatLayer = L.layerGroup();
-let sqLayer = L.layerGroup();
+'use strict';
+const RAW_BASE = 'https://raw.githubusercontent.com/sggenna/Squirrel-s-Eye-View-of-Central-Park/main/data/';
+const TILE = 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png';
+const CENTER = [40.7826,-73.9656], SPLIT = 40.785;
+const NORTH_C = [40.793,-73.960], SOUTH_C = [40.771,-73.972];
+const NC = '#5A6A2A', SC = '#A8421A', CF = "'IBM Plex Mono',monospace";
 
-const ZONE_MAPPING = {
-  1: 'Northwest Corner', 2: 'North Woods', 3: 'Harlem Meer & Lasker Rink', 4: 'Great Hill',
-  5: 'The Ravine', 6: 'The Mount', 7: 'Conservatory Garden', 8: 'The Pool',
-  9: 'North Meadow & Recreation Center', 10: 'East Meadow', 11: 'W90s Landscape/Playgrounds',
-  12: 'Tennis Courts', 13: 'The Reservoir', 14: 'West 86 - 90 Landscape',
-  15: 'Summit Rock/W 80s Playgrounds', 16: 'Great Lawn & The Belvedere',
-  17: 'Metropolitan Museum Landscape', 18: "Naturalists' Walk", 19: 'Ramble & The Lake',
-  20: 'Cedar Hill', 21: 'Strawberry Fields', 22: 'Bethesda Terrace & Cherry Hill',
-  23: 'Conservatory Water', 24: 'W. 60s/Tavern on Green', 25: 'Sheep Meadow',
-  26: 'The Mall', 27: 'The Dene & East Green', 28: 'Southwest Corner',
-  29: 'Heckscher Playground/Ball Fields', 30: 'The Pond & Wollman Rink',
-  31: 'The Zoo, Arsenal, & Wein Walk', 32: 'Grand Army Plaza', 33: 'Drives & Bridle Trail'
-};
+const BC = {runs_from:'#c94c3a',approaches:'#2d7a4f',indifferent:'#2b5fa0',foraging:'#b86a12',eating:'#d4882a',climbing:'#6b4fa0',running:'#1a7a72',kuks:'#a03a6b'};
+const BL = {runs_from:'Flees',approaches:'Approaches',indifferent:'Indifferent',foraging:'Foraging',eating:'Eating',climbing:'Climbing',running:'Running',kuks:'Alarm calls'};
+const ZMAP = {1:'Northwest Corner',2:'North Woods',3:'Harlem Meer & Lasker Rink',4:'Great Hill',5:'The Ravine',6:'The Mount',7:'Conservatory Garden',8:'The Pool',9:'North Meadow & Recreation Center',10:'East Meadow',11:'W90s Landscape/Playgrounds',12:'Tennis Courts',13:'The Reservoir',14:'West 86 - 90 Landscape',15:'Summit Rock/W 80s Playgrounds',16:'Great Lawn & The Belvedere',17:'Metropolitan Museum Landscape',18:"Naturalists' Walk",19:'Ramble & The Lake',20:'Cedar Hill',21:'Strawberry Fields',22:'Bethesda Terrace & Cherry Hill',23:'Conservatory Water',24:'W. 60s/Tavern on Green',25:'Sheep Meadow',26:'The Mall',27:'The Dene & East Green',28:'Southwest Corner',29:'Heckscher Playground/Ball Fields',30:'The Pond & Wollman Rink',31:'The Zoo, Arsenal, & Wein Walk',32:'Grand Army Plaza',33:'Drives & Bridle Trail'};
 
-let curBeh = 'runs_from';
-let curFur = 'all';
-let trafficMode = 'intensity';
-let layers = {sq:true, heat:true, human:true};
+let SQ=[],NSQ=[],SSQ=[],INTENSITY=[],ZONE_DATA=null;
+let hMap,sMap,northMap,southMap,exploreMap;
+let hZoneL,sZoneL,sSqL={},expZoneL,expSqL={};
+let compareBeh='all', activeBeh=new Set(Object.keys(BC));
+let expLayers={human:true,sq:true};
+let ch4Bar=null,ch4Ratio=null;
 
-const map = L.map('map', {
-  center: [40.7830, -73.9660],
-  zoom: 14,
-  zoomControl: true,
-  attributionControl: false
-});
+/* ── DATA LOADING ────────────────────────────────────────── */
+function prog(p,msg){document.getElementById('loader-fill').style.width=p+'%';if(msg)document.getElementById('loader-msg').textContent=msg}
 
-// Setup Panes for Z-index management
-map.createPane('polygons');
-map.getPane('polygons').style.zIndex = 400;
-map.createPane('squirrels');
-map.getPane('squirrels').style.zIndex = 425;
-map.createPane('heatmaps');
-map.getPane('heatmaps').style.zIndex = 450;
-
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-  attribution:'&copy; OpenStreetMap &copy; CartoDB',
-  subdomains:'abcd', maxZoom:19
-}).addTo(map);
-
-L.control.attribution({position:'bottomright'}).addTo(map);
-
-humanLayerContainer.addTo(map);
-heatLayer.addTo(map);
-sqLayer.addTo(map);
-
-function fmt(n){return n>=1000000?(n/1000000).toFixed(1)+'M':n>=1000?(n/1000).toFixed(0)+'K':n}
-
-function drawSq(){
-  sqLayer.clearLayers();
-  if(!layers.sq) return;
-  const col = BEH_COLORS[curBeh];
-  
-  SQ.forEach(s=>{
-    if(curFur!=='all' && s.color!==curFur) return;
-    
-    const active = !!s[curBeh];
-    const fillColor = active ? col : '#7a7570';
-    const fillOp = active ? 1.0 : 0.1;
-    
-    L.circleMarker([s.lat,s.lng],{
-      radius: 1.8, 
-      color: 'none', 
-      weight: 0, 
-      fillColor: fillColor, 
-      fillOpacity: fillOp, 
-      pane: 'squirrels'
-    }).addTo(sqLayer);
-  });
-}
-
-function drawHeat(){
-  heatLayer.clearLayers();
-  if(!layers.heat || !HECTARE_DATA) return;
-  const col = BEH_COLORS[curBeh];
-  
-  const gridCounts = {};
-  SQ.forEach(s => {
-    if(curFur!=='all' && s.color!==curFur) return;
-    if(!s[curBeh]) return;
-    if(s.grid_id) gridCounts[s.grid_id] = (gridCounts[s.grid_id] || 0) + 1;
-  });
-
-  const vals = Object.values(gridCounts);
-  if(vals.length === 0) return;
-  const maxC = Math.max(...vals);
-
-  L.geoJSON(HECTARE_DATA, {
-    pointToLayer: function(feature, latlng) {
-      const gid = feature.properties.grid_id;
-      const count = gridCounts[gid] || 0;
-      if (count === 0) return null;
-      
-      const intensity = count / maxC;
-      const radius = 20 + intensity * 60; 
-      
-      const m = L.circle(latlng, {
-        pane: 'heatmaps',
-        radius,
-        fillColor: col,
-        fillOpacity: 0.5 + intensity * 0.4,
-        color: col,
-        weight: 1,
-        opacity: 0.3
-      });
-      m.bindTooltip(`Hectare ${feature.properties.hectare || 'Unknown'}: ${count} sightings`);
-      return m;
-    }
-  }).addTo(heatLayer);
-}
-
-function drawHuman(){
-  humanLayerContainer.clearLayers();
-  if(!layers.human || !ZONE_DATA) return;
-  
-  const getIntensityOpacity = (val) => {
-    if (val >= 500000) return 0.90;
-    if (val >= 300000) return 0.75;
-    if (val >= 250000) return 0.60;
-    if (val >= 200000) return 0.50;
-    if (val >= 150000) return 0.40;
-    if (val >= 100000) return 0.30;
-    if (val >= 50000)  return 0.15;
-    return 0.05;
-  };
-
-  const getVolumeOpacity = (val) => {
-    if (val >= 5000000) return 0.90;
-    if (val >= 4000000) return 0.70;
-    if (val >= 3000000) return 0.50;
-    if (val >= 2000000) return 0.35;
-    if (val >= 1000000) return 0.20;
-    return 0.08;
-  };
-
-  L.geoJSON(ZONE_DATA, {
-    pane: 'polygons',
-    style: function(feature) {
-      const zoneId = parseInt(feature.properties.zone);
-      const name = ZONE_MAPPING[zoneId];
-      
-      let opacity = 0.05;
-      if (trafficMode === 'intensity') {
-        const match = INTENSITY_DATA.find(v => v.Name === name);
-        opacity = getIntensityOpacity(match ? match['Visits/Acre'] : 0);
-      } else {
-        const match = VOLUME_DATA.find(v => v.Name === name);
-        opacity = getVolumeOpacity(match ? match['Estimated Visits'] : 0);
-      }
-      
-      return {
-        fillColor: '#2b5fa0',
-        fillOpacity: opacity,
-        color: '#2b5fa0',
-        weight: 1,
-        opacity: 0.15
-      };
-    },
-    onEachFeature: function(feature, layer) {
-      const zoneId = parseInt(feature.properties.zone);
-      const name = ZONE_MAPPING[zoneId];
-      const matchI = INTENSITY_DATA.find(v => v.Name === name);
-      const matchV = VOLUME_DATA.find(v => v.Name === name);
-      const intensity = matchI ? matchI['Visits/Acre'] : 0;
-      const visits = matchV ? matchV['Estimated Visits'] : 0;
-      layer.bindTooltip(`<strong>${name}</strong><br>Intensity: ${intensity.toLocaleString()} visits/acre<br>Total: ${fmt(visits)} visits/yr`);
-    }
-  }).addTo(humanLayerContainer);
-}
-
-function setTrafficMode(m) {
-  trafficMode = m;
-  document.getElementById('tm-intensity').classList.toggle('on', m === 'intensity');
-  document.getElementById('tm-volume').classList.toggle('on', m === 'volume');
-  drawHuman();
-}
-
-function redrawAll(){drawSq();drawHeat();}
-
-const BEH_COLORS = {
-  runs_from:'#c94c3a', approaches:'#2d7a4f', indifferent:'#2b5fa0',
-  foraging:'#b86a12', eating:'#d4882a', climbing:'#6b4fa0',
-  running:'#1a7a72', kuks:'#a03a6b'
-};
-
-const BEH_LABELS = {
-  runs_from:'Flees humans', approaches:'Approaches humans', indifferent:'Indifferent',
-  foraging:'Foraging', eating:'Eating', climbing:'Climbing',
-  running:'Running', kuks:'Alarm calls (kuks)'
-};
-
-function updateLegend(){
-  const col = BEH_COLORS[curBeh];
-  const legTitle = document.getElementById('leg-title');
-  if(!legTitle) return;
-  legTitle.textContent = 'Behavior: '+BEH_LABELS[curBeh];
-  const filtered = SQ.filter(s=>curFur==='all'||s.color===curFur);
-  const count = filtered.filter(s=>s[curBeh]).length;
-  const pct = filtered.length?Math.round(count/filtered.length*100):0;
-  const legBody = document.getElementById('leg-body');
-  if(legBody) {
-    legBody.innerHTML=`
-      <div class="leg-row"><div class="leg-dot" style="background:${col}"></div><span style="color:#2d2a26;font-weight:500">${BEH_LABELS[curBeh]}</span></div>
-      <div class="leg-row" style="padding-left:20px;font-size:0.68rem;color:#8a8278">${count.toLocaleString()} squirrels (${pct}%)</div>
-      <div style="margin:0.5rem 0 0.3rem;height:1px;background:#e8e1d8"></div>
-      <div class="leg-row"><div class="leg-bar" style="width:32px;background:#2b5fa0;opacity:0.35"></div>Human traffic intensity</div>
-      <div class="leg-row"><div class="leg-dot" style="background:#c4bdb4;opacity:0.5"></div>Squirrel (other)</div>
-    `;
+async function loadAll(){
+  try{
+    prog(5,'Loading zone boundaries…');
+    const [zR,volR,intR,sqR] = await Promise.all([
+      fetch(RAW_BASE+'zoneboundries.geojson'),
+      fetch(RAW_BASE+'volume_of_use_by_area.csv'),
+      fetch(RAW_BASE+'intensity_of_use_by_area.csv'),
+      fetch(RAW_BASE+'Squirrel_Data.csv'),
+    ]);
+    ZONE_DATA = await zR.json();
+    prog(30,'Parsing visitor data…');
+    const volData = Papa.parse(await volR.text(),{header:true,dynamicTyping:true,skipEmptyLines:true}).data;
+    INTENSITY    = Papa.parse(await intR.text(),{header:true,dynamicTyping:true,skipEmptyLines:true}).data;
+    prog(55,'Parsing squirrel census…');
+    const b=v=>v===true||v==='true'||v==='TRUE';
+    SQ = Papa.parse(await sqR.text(),{header:true,dynamicTyping:true,skipEmptyLines:true}).data
+      .filter(r=>r.X&&r.Y)
+      .map(r=>({lat:r.Y,lng:r.X,color:(r['Primary Fur Color']||'U')[0],shift:r.Shift,
+        runs_from:b(r['Runs from']),approaches:b(r.Approaches),indifferent:b(r.Indifferent),
+        foraging:b(r.Foraging),eating:b(r.Eating),climbing:b(r.Climbing),
+        running:b(r.Running),kuks:b(r.Kuks)}));
+    NSQ=SQ.filter(s=>s.lat>SPLIT); SSQ=SQ.filter(s=>s.lat<=SPLIT);
+    prog(80,'Drawing maps…');
+    initMaps();
+    buildCharts();
+    buildCompareFilters();
+    buildExploreFilters();
+    initScrolly();
+    initReveals();
+    initProgress();
+    prog(100,'');
+    setTimeout(()=>{const l=document.getElementById('loader');l.classList.add('done');setTimeout(()=>l.remove(),700)},350);
+  }catch(e){
+    document.getElementById('loader-msg').textContent='Error: '+e.message;
+    document.getElementById('loader-fill').style.background='#c94c3a';
+    console.error(e);
   }
 }
 
-function updateStats(){
-  const filtered = SQ.filter(s=>curFur==='all'||s.color===curFur);
-  const count = filtered.filter(s=>s[curBeh]).length;
-  const pct = filtered.length?((count/filtered.length)*100).toFixed(1):0;
-  const appCount = filtered.filter(s=>s.approaches).length;
-  document.getElementById('sv1').textContent=count.toLocaleString();
-  document.getElementById('sl1').textContent=BEH_LABELS[curBeh]+' ('+curFur+')';
-  document.getElementById('sv2').textContent=pct+'%';
-  document.getElementById('sl2').textContent=curBeh.replace('_',' ')+' rate';
-  document.getElementById('sv3').textContent=appCount.toLocaleString();
+/* ── ZONE LAYER BUILDER ──────────────────────────────────── */
+function heatColor(val){
+  const stops=[[500000,'#8b0000','#6b0000',.9],[350000,'#c0392b','#9b2820',.83],[250000,'#e05c26','#b84a1e',.76],[180000,'#e8832a','#c06820',.68],[120000,'#e8a92a','#c08820',.58],[70000,'#e8c82a','#c0a420',.46],[30000,'#b8d46a','#90a850',.32],[5000,'#78b87a','#5a9060',.2],[0,'#aacaaa','#88a888',.08]];
+  for(const[t,f,bd,o]of stops)if(val>=t)return{f,bd,o};
+  return{f:'#ccc',bd:'#aaa',o:.05};
 }
 
-function toggleLayer(l){
-  layers[l]=!layers[l];
-  const tg = document.getElementById('tg-'+l);
-  const lr = document.getElementById('lr-'+l);
-  if(tg) tg.classList.toggle('on',layers[l]);
-  if(lr) lr.classList.toggle('on',layers[l]);
-  
-  if(l==='sq') drawSq();
-  else if(l==='heat') drawHeat();
-  else if(l==='human') drawHuman();
-}
-
-function setBeh(b){
-  curBeh=b;
-  document.querySelectorAll('.bb').forEach(el=>{
-    const on=el.id==='bb-'+b;
-    el.classList.toggle('on',on);
-    const col=BEH_COLORS[b];
-    if(on){el.style.background=col+'18';el.style.borderColor=col+'55';el.style.color=col;}
-    else{el.style.background='';el.style.borderColor='';el.style.color='';}
-  });
-  updateLegend(); updateStats(); redrawAll();
-}
-
-function setFur(f){
-  curFur=f;
-  document.querySelectorAll('.fp').forEach(el=>{
-    el.classList.toggle('on',el.id==='fp-'+f);
-  });
-  updateLegend(); updateStats(); redrawAll();
-}
-
-function switchView(v){
-  document.getElementById('pmap').classList.toggle('on',v==='map');
-  document.getElementById('pcharts').classList.toggle('on',v==='charts');
-  document.querySelectorAll('.tab').forEach((t,i)=>{
-    t.classList.toggle('on',(i===0&&v==='map')||(i===1&&v==='charts'));
-  });
-  if(v==='map') setTimeout(()=>map.invalidateSize(),50);
-}
-
-// Simple Point-in-Polygon for Aggregation
-function isInside(point, vs) {
-  var x = point[0], y = point[1];
-  var inside = false;
-  for (var i = 0, j = vs.length - 1; i < vs.length; j = i++) {
-    var xi = vs[i][0], yi = vs[i][1];
-    var xj = vs[j][0], yj = vs[j][1];
-    var intersect = ((yi > y) != (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
-    if (intersect) inside = !inside;
-  }
-  return inside;
-}
-
-// Data Loading
-async function loadData() {
-  const [sqRes, volRes, intRes, zoneRes, hectRes] = await Promise.all([
-    fetch('data/Squirrel_Data.csv'),
-    fetch('data/volume_of_use_by_area.csv'),
-    fetch('data/intensity_of_use_by_area.csv'),
-    fetch('data/zoneboundries.geojson'),
-    fetch('data/hectares.geojson')
-  ]);
-  
-  const [sqText, volText, intText, zoneData, hectData] = await Promise.all([
-    sqRes.text(),
-    volRes.text(),
-    intRes.text(),
-    zoneRes.json(),
-    hectRes.json()
-  ]);
-
-  ZONE_DATA = zoneData;
-  HECTARE_DATA = hectData;
-
-  Papa.parse(volText, {
-    header: true,
-    dynamicTyping: true,
-    skipEmptyLines: true,
-    complete: function(results) {
-      VOLUME_DATA = results.data;
-    }
-  });
-
-  Papa.parse(intText, {
-    header: true,
-    dynamicTyping: true,
-    skipEmptyLines: true,
-    complete: function(results) {
-      INTENSITY_DATA = results.data;
-    }
-  });
-  
-  Papa.parse(sqText, {
-    header: true,
-    dynamicTyping: true,
-    skipEmptyLines: true,
-    complete: function(results) {
-      SQ = results.data.map(r => {
-        if (!r.X || !r.Y) return null;
-        const val = v => (v === true || v === 'true' || v === 'TRUE');
-        
-        // Find which hectare polygon this squirrel belongs to spatially
-        let gridId = null;
-        for (const feature of HECTARE_DATA.features) {
-           if (isInside([r.X, r.Y], feature.properties.poly[0])) {
-             gridId = feature.properties.grid_id;
-             break;
-           }
-        }
-
-        return {
-          lng: r.X, lat: r.Y,
-          grid_id: gridId,
-          hectare: r['Hectare'],
-          color: r['Primary Fur Color'] ? r['Primary Fur Color'][0] : 'U',
-          age: r['Age'] ? r['Age'][0] : 'U',
-          shift: r['Shift'],
-          runs_from: val(r['Runs from']),
-          approaches: val(r['Approaches']),
-          indifferent: val(r['Indifferent']),
-          foraging: val(r['Foraging']),
-          eating: val(r['Eating']),
-          climbing: val(r['Climbing']),
-          running: val(r['Running']),
-          chasing: val(r['Chasing']),
-          kuks: val(r['Kuks']),
-          tail_flags: val(r['Tail flags'])
-        };
-      }).filter(s => s !== null);
-      
-      drawHuman();
-      initApp();
+function buildZoneLayer(color,onEach){
+  return L.geoJSON(ZONE_DATA,{
+    style(feat){
+      const name=ZMAP[parseInt(feat.properties.zone)];
+      const m=INTENSITY.find(v=>v.Name===name);
+      const val=m?(m['Visits/Acre']||0):0;
+      const {f,bd,o}=heatColor(val);
+      return{fillColor:f,fillOpacity:o,color:bd,weight:1,opacity:.45};
+    },
+    onEachFeature(feat,layer){
+      const name=ZMAP[parseInt(feat.properties.zone)]||'Unknown';
+      const mi=INTENSITY.find(v=>v.Name===name);
+      const val=mi?(mi['Visits/Acre']||0):0;
+      layer.bindTooltip(`<strong>${name}</strong><br>${val.toLocaleString()} visits/acre/yr`);
+      if(onEach)onEach(feat,layer);
     }
   });
 }
 
-function initApp() {
-  document.getElementById('pill-sq').textContent = SQ.length.toLocaleString() + ' squirrels';
-  setBeh('runs_from');
-  initCharts();
-  updateCorrelationBars();
-  updateInsights();
-}
-
-const CHART_OPTS = {
-  responsive:true, maintainAspectRatio:false,
-  plugins:{legend:{display:false}},
+/* ── SQ LAYER BUILDER ────────────────────────────────────── */
+const colorFn=s=>{
+  if(s.runs_from)return BC.runs_from;
+  if(s.approaches)return BC.approaches;
+  if(s.indifferent)return BC.indifferent;
+  if(s.foraging||s.eating)return BC.foraging;
+  return '#A09080';
 };
-const GRID = {grid:{color:'#f2ede6'},ticks:{color:'#8a8278',font:{size:10}}};
 
-function initCharts() {
-  const flees = SQ.filter(s=>s.runs_from).length;
-  const appr = SQ.filter(s=>s.approaches).length;
-  const indif = SQ.filter(s=>s.indifferent).length;
-  const other = SQ.length - flees - appr - indif;
-  const pct = v => (v/SQ.length*100).toFixed(1);
-
-  new Chart(document.getElementById('ch1'),{
-    type:'doughnut',
-    data:{
-      labels:['Flees','Indifferent','Approaches','Other'],
-      datasets:[{data:[pct(flees),pct(indif),pct(appr),pct(other)],
-        backgroundColor:['#c94c3a','#2d2a26','#2d7a4f','#e8e1d8'],
-        borderWidth:3,borderColor:'#ffffff',hoverOffset:5}]
-    },
-    options:{...CHART_OPTS,cutout:'62%'}
+function buildSqLayer(arr,filterFn,cfn,r,onOver){
+  const lg=L.layerGroup();
+  arr.forEach(s=>{
+    if(!filterFn(s))return;
+    const col=cfn(s);
+    const m=L.circleMarker([s.lat,s.lng],{radius:r,color:'#fff',weight:1.2,fillColor:col,fillOpacity:.9,opacity:.6});
+    if(onOver){
+      m.on('mouseover',()=>{m.setStyle({weight:2.2,radius:r+1.5});onOver(s)});
+      m.on('mouseout',()=>{m.setStyle({weight:1.2,radius:r});onOver(null)});
+    }
+    m.addTo(lg);
   });
-
-  const acts = {
-    'Indifferent': indif,
-    'Foraging': SQ.filter(s=>s.foraging).length,
-    'Eating': SQ.filter(s=>s.eating).length,
-    'Running': SQ.filter(s=>s.running).length,
-    'Climbing': SQ.filter(s=>s.climbing).length,
-    'Flees': flees,
-    'Chasing': SQ.filter(s=>s.chasing).length,
-    'Approaches': appr,
-    'Alarm calls': SQ.filter(s=>s.kuks).length
-  };
-  const sortedActs = Object.entries(acts).sort((a,b)=>b[1]-a[1]);
-
-  new Chart(document.getElementById('ch2'),{
-    type:'bar',
-    data:{
-      labels: sortedActs.map(a=>a[0]),
-      datasets:[{
-        data: sortedActs.map(a=>a[1]),
-        backgroundColor: sortedActs.map(a=>BEH_COLORS[a[0].toLowerCase().replace(' ','_')] || '#2d2a26'),
-        borderRadius:3,borderWidth:0
-      }]
-    },
-    options:{...CHART_OPTS,indexAxis:'y',scales:{
-      x:{...GRID},y:{grid:{display:false},ticks:{color:'#8a8278',font:{size:10}}}
-    }}
-  });
-
-  const colors = ['G','C','B'];
-  const furData = colors.map(c => {
-    const sub = SQ.filter(s=>s.color===c);
-    if(sub.length === 0) return {flee:0,appr:0,indif:0};
-    return {
-      flee: (sub.filter(s=>s.runs_from).length / sub.length * 100).toFixed(0),
-      appr: (sub.filter(s=>s.approaches).length / sub.length * 100).toFixed(0),
-      indif: (sub.filter(s=>s.indifferent).length / sub.length * 100).toFixed(0)
-    };
-  });
-
-  new Chart(document.getElementById('ch3'),{
-    type:'bar',
-    data:{
-      labels:['Gray','Cinnamon','Black'],
-      datasets:[
-        {label:'Flees',data:furData.map(d=>d.flee),backgroundColor:'#c94c3a',borderRadius:2},
-        {label:'Approaches',data:furData.map(d=>d.appr),backgroundColor:'#2d7a4f',borderRadius:2},
-        {label:'Indifferent',data:furData.map(d=>d.indif),backgroundColor:'#2b5fa0',borderRadius:2}
-      ]
-    },
-    options:{...CHART_OPTS,scales:{
-      x:{...GRID,grid:{display:false}},
-      y:{...GRID,title:{display:true,text:'% of sightings',color:'#8a8278',font:{size:10}},max:70}
-    }}
-  });
-
-  const getShiftData = (shift) => {
-    const sub = SQ.filter(s=>s.shift===shift);
-    if(sub.length === 0) return [0,0,0,0,0];
-    return [
-      (sub.filter(s=>s.runs_from).length/sub.length*100).toFixed(0),
-      (sub.filter(s=>s.approaches).length/sub.length*100).toFixed(0),
-      (sub.filter(s=>s.foraging).length/sub.length*100).toFixed(0),
-      (sub.filter(s=>s.eating).length/sub.length*100).toFixed(0),
-      (sub.filter(s=>s.climbing).length/sub.length*100).toFixed(0)
-    ];
-  };
-
-  new Chart(document.getElementById('ch4'),{
-    type:'bar',
-    data:{
-      labels:['Flees','Approaches','Foraging','Eating','Climbing'],
-      datasets:[
-        {label:'AM',data:getShiftData('AM'),backgroundColor:'#c94c3a',borderRadius:2},
-        {label:'PM',data:getShiftData('PM'),backgroundColor:'#2b5fa0',borderRadius:2}
-      ]
-    },
-    options:{...CHART_OPTS,scales:{
-      x:{...GRID,grid:{display:false}},
-      y:{...GRID,title:{display:true,text:'%',color:'#8a8278',font:{size:10}}}
-    }}
-  });
+  return lg;
 }
 
-function updateCorrelationBars() {
-  const corrData=[
-    {zone:'Wollman Rink',lat:40.7688,lng:-73.9758,csvArea:'The Pond & Wollman Rink'},
-    {zone:'SW Corner',lat:40.7684,lng:-73.9796,csvArea:'Southwest Corner'},
-    {zone:'Great Lawn',lat:40.7815,lng:-73.9651,csvArea:'Great Lawn & The Belvedere'},
-    {zone:'Heckscher Ballfields',lat:40.7692,lng:-73.9786,csvArea:'Heckscher Playground/Ball Fields'},
-    {zone:'Reservoir',lat:40.7853,lng:-73.9652,csvArea:'The Reservoir'},
-    {zone:'Central Park Zoo',lat:40.7676,lng:-73.9718,csvArea:'The Zoo, Arsenal, & Wein Walk'},
-    {zone:'Sheep Meadow',lat:40.7713,lng:-73.9769,csvArea:'Sheep Meadow'},
-    {zone:'Bethesda Terrace',lat:40.7741,lng:-73.9712,csvArea:'Bethesda Terrace & Cherry Hill'},
-    {zone:'Strawberry Fields',lat:40.7755,lng:-73.9742,csvArea:'Strawberry Fields'},
-    {zone:'Harlem Meer',lat:40.7963,lng:-73.9538,csvArea:'Harlem Meer & Lasker Rink'},
-    {zone:'North Meadow',lat:40.7932,lng:-73.9615,csvArea:'North Meadow & Recreation Center'},
-    {zone:'Great Hill',lat:40.792,lng:-73.968,csvArea:'Great Hill'},
+/* ── MAP INIT ────────────────────────────────────────────── */
+function mkMap(id,center,zoom,scroll){
+  const m=L.map(id,{center,zoom,zoomControl:zoom>13,scrollWheelZoom:!!scroll,doubleClickZoom:false,attributionControl:false});
+  L.tileLayer(TILE,{maxZoom:19}).addTo(m);
+  L.control.attribution({prefix:false}).addTo(m);
+  return m;
+}
+
+function initMaps(){
+  /* Ch1 — humans */
+  hMap=mkMap('hmap',CENTER,13,false);
+  hZoneL=buildZoneLayer().addTo(hMap);
+  setTimeout(()=>hMap.invalidateSize(),200);
+
+  /* Ch2 — squirrels */
+  sMap=mkMap('smap',CENTER,13,false);
+  buildZoneLayer().addTo(sMap);
+  sSqL.all   = buildSqLayer(SQ,()=>true,colorFn,4);
+  sSqL.appr  = buildSqLayer(SQ,s=>s.approaches,()=>BC.approaches,7);
+  sSqL.flees = buildSqLayer(SQ,s=>s.runs_from, ()=>BC.runs_from, 7);
+  sSqL.all.addTo(sMap);
+  setTimeout(()=>sMap.invalidateSize(),200);
+
+  /* Ch4 — compare */
+  northMap=mkMap('north-map',NORTH_C,14,false);
+  southMap=mkMap('south-map',SOUTH_C,14,false);
+  buildZoneLayer().addTo(northMap);
+  buildZoneLayer().addTo(southMap);
+  updateCompareMaps();
+  setTimeout(()=>{northMap.invalidateSize();southMap.invalidateSize();buildCh4Charts();},300);
+
+  /* Ch5 — explore */
+  exploreMap=mkMap('explore-map',CENTER,14,true);
+  expZoneL=buildZoneLayer().addTo(exploreMap);
+  Object.keys(BC).forEach(key=>{
+    expSqL[key]=buildSqLayer(SQ,s=>!!s[key],()=>BC[key],4,(s)=>{
+      const el=document.getElementById('ehover');
+      if(!s){el.textContent='Hover a dot on the map.';return;}
+      el.innerHTML=`<div style="color:var(--ink);font-weight:500;margin-bottom:4px">${BL[key]}</div>
+        Fur: ${s.color==='G'?'Gray':s.color==='C'?'Cinnamon':s.color==='B'?'Black':'?'}<br>
+        Zone: ${s.lat>SPLIT?'North':'South'} Park<br>Shift: ${s.shift||'—'}`;
+    });
+    expSqL[key].addTo(exploreMap);
+  });
+  updateExploreCounts();
+}
+
+/* ── CH2 MAP STEP UPDATES ────────────────────────────────── */
+let curSStep=-1;
+function updateSqMap(step){
+  if(step===curSStep)return; curSStep=step;
+  const tags=['All 3,023 sightings · colored by behavior','Approach sightings highlighted · south concentration','Flee sightings highlighted · north concentration','All behaviors · full behavioral spectrum'];
+  document.getElementById('stag').textContent=tags[step]||tags[0];
+  Object.values(sSqL).forEach(l=>l.remove());
+  if(step===0||step===3){sSqL.all.addTo(sMap);sMap.flyTo(CENTER,13,{duration:1})}
+  else if(step===1){sSqL.all.addTo(sMap);sSqL.appr.addTo(sMap);sMap.flyTo([40.772,-73.972],14,{duration:1.1})}
+  else{sSqL.all.addTo(sMap);sSqL.flees.addTo(sMap);sMap.flyTo([40.793,-73.963],14,{duration:1.1})}
+}
+
+let curHStep=-1;
+function updateHMap(step){
+  if(step===curHStep)return; curHStep=step;
+  const views=[
+    {c:CENTER,           z:13},
+    {c:[40.768,-73.974], z:14},
+    {c:CENTER,           z:13},
+    {c:[40.794,-73.961], z:14},
   ];
-  const corrEl = document.getElementById('corr-rows');
-  if(!corrEl) return;
-  corrEl.innerHTML = '';
-  corrData.forEach(d=>{
-    const match = VOLUME_DATA.find(v => v.Name === d.csvArea);
-    const visits = match ? match['Estimated Visits'] : 0;
-    const visitsM = (visits / 1000000).toFixed(1);
+  const tags=[
+    'All park zones · human foot traffic intensity',
+    'Southern zones · highest intensity',
+    'The traffic gradient · south to north',
+    'Northern quiet zones · low intensity',
+  ];
+  document.getElementById('htag').textContent=tags[step]||tags[0];
+  const v=views[step]||views[0];
+  hMap.flyTo(v.c, v.z, {duration:1.1, easeLinearity:.4});
+}
 
-    const totalNearby = SQ.filter(s=>{
-      const dlat=s.lat-d.lat, dlng=s.lng-d.lng;
-      return Math.sqrt(dlat*dlat+dlng*dlng)<0.006;
-    }).length;
-    const fleeNearby = SQ.filter(s=>{
-      const dlat=s.lat-d.lat, dlng=s.lng-d.lng;
-      return Math.sqrt(dlat*dlat+dlng*dlng)<0.006 && s.runs_from;
-    }).length;
-    const flee = totalNearby ? Math.round(fleeNearby/totalNearby*100) : 0;
-    
-    const inten = flee/35;
-    const col = `hsl(${10 + inten*20},${55 + inten*25}%,${55 - inten*18}%)`;
-    corrEl.innerHTML+=`<div class="cb-row">
-      <div class="cb-labels">
-        <span>${d.zone}</span>
-        <span style="color:${col}">${flee}% flee  ${visitsM}M visits/yr</span>
-      </div>
-      <div class="cb-track"><div class="cb-fill" style="width:${Math.min(100, flee/35*100)}%;background:${col}"></div></div>
-    </div>`;
+/* ── SCROLLY OBSERVER ────────────────────────────────────── */
+const CHAPTERS = [
+  {id:'ch1', num:'01', title:'How you use <em>Central Park</em>'},
+  {id:'ch2', num:'02', title:'How squirrels use <em>the same space</em>'},
+  {id:'ch3', num:'03', title:'Eight behaviors, <em>one census</em>'},
+  {id:'ch4', num:'04', title:'North vs. South — <em>two different parks</em>'},
+  {id:'ch5', num:'05', title:'Explore <em>for yourself</em>'},
+];
+
+function setBanner(num, title) {
+  const n = document.getElementById('cb-num');
+  const t = document.getElementById('cb-title');
+  const b = document.getElementById('chapter-banner');
+  if (!n || !t) return;
+  if (n.textContent === num) return; // no flicker if same
+  b.style.transition = 'opacity .2s';
+  b.style.opacity = '0';
+  setTimeout(() => {
+    n.textContent = num;
+    t.innerHTML = title;
+    b.style.opacity = '1';
+  }, 180);
+}
+
+function initScrolly(){
+  // Step observer — triggers map flyTo
+  const stepObs = new IntersectionObserver(entries=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){
+        e.target.classList.add('active');
+        const step=+e.target.dataset.step;
+        if(e.target.closest('#steps-humans'))updateHMap(step);
+        if(e.target.closest('#steps-squirrels'))updateSqMap(step);
+      }else e.target.classList.remove('active');
+    });
+  },{rootMargin:'-30% 0px -30% 0px'});
+  document.querySelectorAll('.step').forEach(el=>stepObs.observe(el));
+
+  // Chapter observer — updates the sticky banner
+  const chObs = new IntersectionObserver(entries=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){
+        const ch = CHAPTERS.find(c=>c.id===e.target.id);
+        if(ch) setBanner(ch.num, ch.title);
+      }
+    });
+  },{rootMargin:'-5% 0px -85% 0px'});
+  CHAPTERS.forEach(c=>{
+    const el=document.getElementById(c.id);
+    if(el) chObs.observe(el);
+  });
+
+  // Hide banner on hero
+  const heroObs = new IntersectionObserver(entries=>{
+    entries.forEach(e=>{
+      const b=document.getElementById('chapter-banner');
+      if(b) b.style.opacity = e.isIntersecting ? '0' : '1';
+    });
+  },{threshold:0.2});
+  const hero=document.getElementById('hero');
+  if(hero) heroObs.observe(hero);
+}
+
+/* ── CH3 CHARTS ──────────────────────────────────────────── */
+const BEHS=[
+  {key:'runs_from',label:'Flees',short:'Flees'},
+  {key:'approaches',label:'Approaches',short:'Appr.'},
+  {key:'indifferent',label:'Indifferent',short:'Indiff.'},
+  {key:'foraging',label:'Foraging',short:'Forage'},
+  {key:'eating',label:'Eating',short:'Eating'},
+  {key:'running',label:'Running',short:'Run'},
+  {key:'climbing',label:'Climbing',short:'Climb'},
+  {key:'kuks',label:'Alarm calls',short:'Alarm'},
+];
+Chart.defaults.font.family="'IBM Plex Sans',sans-serif";
+Chart.defaults.color='#7A6040';
+const TOOLTIP={backgroundColor:'rgba(43,29,14,.92)',titleFont:{family:"'Playfair Display',serif",style:'italic',size:13},bodyFont:{family:CF,size:11},padding:10};
+
+function pct(arr,key){return arr.length?+(arr.filter(s=>s[key]).length/arr.length*100).toFixed(1):0}
+
+function buildCharts(){
+  const NR=BEHS.map(b=>pct(NSQ,b.key));
+  const SR=BEHS.map(b=>pct(SSQ,b.key));
+  const labs=BEHS.map(b=>b.label);
+
+  new Chart(document.getElementById('chart-nsbar'),{type:'bar',data:{labels:labs,datasets:[
+    {label:'North Park',data:NR,backgroundColor:NC+'cc',borderColor:NC,borderWidth:1,borderRadius:3},
+    {label:'South Park',data:SR,backgroundColor:SC+'cc',borderColor:SC,borderWidth:1,borderRadius:3},
+  ]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+    animation:{duration:900,easing:'easeOutQuart',delay:ctx=>ctx.dataIndex*55},
+    plugins:{legend:{display:false},tooltip:{...TOOLTIP,callbacks:{label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.x.toFixed(1)}%`}}},
+    scales:{x:{grid:{color:'rgba(43,29,14,.06)'},ticks:{font:{family:CF,size:10},callback:v=>v+'%'}},y:{grid:{display:false},ticks:{font:{size:11}}}}}});
+
+  const diffs=BEHS.map((b,i)=>+(SR[i]-NR[i]).toFixed(1));
+  new Chart(document.getElementById('chart-diverge'),{type:'bar',data:{labels:labs,datasets:[{
+    data:diffs,backgroundColor:diffs.map(d=>d>0?SC+'dd':NC+'dd'),borderColor:diffs.map(d=>d>0?SC:NC),borderWidth:1,borderRadius:3
+  }]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+    animation:{duration:1000,easing:'easeOutElastic',delay:ctx=>ctx.dataIndex*75},
+    plugins:{legend:{display:false},tooltip:{...TOOLTIP,callbacks:{label:ctx=>{const v=ctx.parsed.x;return ` ${v>0?'+':''}${v.toFixed(1)} pp (${v>0?'more in south':'more in north'})`;
+    }}}},
+    scales:{x:{grid:{color:'rgba(43,29,14,.06)'},ticks:{font:{family:CF,size:10},callback:v=>(v>0?'+':'')+v+' pp'},title:{display:true,text:'Percentage point difference (south − north)',font:{size:10,family:CF}}},y:{grid:{display:false},ticks:{font:{size:11}}}}}});
+
+  const rg=document.getElementById('ratio-grid'); rg.innerHTML='';
+  [{key:'approaches',label:'Flees',desc:'more likely to approach in south',icon:'🐿️',inv:false},
+   {key:'runs_from',label:'Flees Humans',desc:'higher flee rate in north vs south',icon:'💨',inv:true},
+   {key:'indifferent',label:'Indifferent',desc:'of all squirrels indifferent to humans',icon:'😐',all:true},
+   {key:'climbing',label:'Climbing',desc:'higher climbing rate in tree-dense north',icon:'🌲',inv:true},
+  ].forEach(s=>{
+    const nr=pct(NSQ,s.key),sr=pct(SSQ,s.key);
+    const ratio=s.all?pct(SQ,s.key):s.inv?(nr>0&&sr>0?+(nr/sr).toFixed(1):0):(nr>0?+(sr/nr).toFixed(1):0);
+    const col=s.all?'#7A6040':s.inv?NC:SC;
+    const card=document.createElement('div'); card.className='rc';
+    card.innerHTML=`<div class="rc-eyebrow">${s.icon} ${BL[s.key]||s.label}</div>
+      <div class="rc-val" style="color:${col}">${s.all?ratio.toFixed(0)+'%':ratio.toFixed(1)+'×'}</div>
+      <div class="rc-desc">${s.desc}</div>
+      <div class="rc-bar-row"><div class="rc-bar-lbl" style="color:${NC}">North</div><div class="rc-track"><div class="rc-fill" style="width:${Math.min(100,nr*2)}%;background:${NC}"></div></div><div class="rc-pct">${nr.toFixed(1)}%</div></div>
+      <div class="rc-bar-row"><div class="rc-bar-lbl" style="color:${SC}">South</div><div class="rc-track"><div class="rc-fill" style="width:${Math.min(100,sr*2)}%;background:${SC}"></div></div><div class="rc-pct">${sr.toFixed(1)}%</div></div>`;
+    rg.appendChild(card);
   });
 }
 
-function updateInsights() {
-  const flees = SQ.filter(s=>s.runs_from).length;
-  const indif = SQ.filter(s=>s.indifferent).length;
-  const appr = SQ.filter(s=>s.approaches).length;
-  const forage = SQ.filter(s=>s.foraging).length;
-  const pct = v => (v/SQ.length*100).toFixed(1) + '%';
-  
-  const fleeEl = document.getElementById('ins-flee');
-  const indifEl = document.getElementById('ins-indif');
-  const apprEl = document.getElementById('ins-appr');
-  const forageEl = document.getElementById('ins-forage');
-  const southEl = document.getElementById('ins-south');
-
-  if(fleeEl) fleeEl.textContent = pct(flees);
-  if(indifEl) indifEl.textContent = pct(indif);
-  if(apprEl) apprEl.textContent = pct(appr);
-  if(forageEl) forageEl.textContent = pct(forage);
-  
-  const south = SQ.filter(s=>s.lat < 40.775);
-  const north = SQ.filter(s=>s.lat > 40.790);
-  const southFlee = south.filter(s=>s.runs_from).length / south.length;
-  const northFlee = north.filter(s=>s.runs_from).length / north.length;
-  const ratio = (southFlee / northFlee).toFixed(1);
-  if(southEl) southEl.textContent = ratio + '×';
+/* ── CH4 COMPARE ─────────────────────────────────────────── */
+function buildCompareFilters(){
+  const wrap=document.getElementById('compare-filters');
+  [['all','All','#7A4A22'],...Object.entries(BL).map(([k,v])=>[k,v,BC[k]])].forEach(([id,label,col])=>{
+    const btn=document.createElement('button'); btn.className='fpill'+(id==='all'?' on':'');
+    btn.innerHTML=`<div class="fpill-dot" style="background:${col}"></div>${label}`;
+    btn.onclick=()=>{compareBeh=id;wrap.querySelectorAll('.fpill').forEach(b=>b.classList.remove('on'));btn.classList.add('on');updateCompareMaps();};
+    wrap.appendChild(btn);
+  });
 }
 
-loadData();
+function updateCompareMaps(){
+  const ff=compareBeh==='all'?()=>true:s=>!!s[compareBeh];
+  const cf=compareBeh==='all'?colorFn:()=>BC[compareBeh];
+  if(northMap._sqLayer){northMap._sqLayer.remove()}
+  if(southMap._sqLayer){southMap._sqLayer.remove()}
+  northMap._sqLayer=buildSqLayer(NSQ.filter(ff),()=>true,cf,4); northMap._sqLayer.addTo(northMap);
+  southMap._sqLayer=buildSqLayer(SSQ.filter(ff),()=>true,cf,4); southMap._sqLayer.addTo(southMap);
+  document.getElementById('north-badge').textContent=NSQ.length.toLocaleString()+' sightings';
+  document.getElementById('south-badge').textContent=SSQ.length.toLocaleString()+' sightings';
+  const mkStats=(el,arr)=>{el.innerHTML=[['approaches','Approaches'],['runs_from','Flees'],['climbing','Climbing']].map(([k,l])=>`<div class="cs"><div class="cs-val">${pct(arr,k).toFixed(1)}%</div><div class="cs-key">${l}</div></div>`).join('')};
+  mkStats(document.getElementById('north-stats'),NSQ);
+  mkStats(document.getElementById('south-stats'),SSQ);
+}
+
+function buildCh4Charts(){
+  const NR=BEHS.map(b=>pct(NSQ,b.key));
+  const SR=BEHS.map(b=>pct(SSQ,b.key));
+  const shorts=BEHS.map(b=>b.short);
+  if(ch4Bar)ch4Bar.destroy();
+  ch4Bar=new Chart(document.getElementById('chart-compare-bar'),{type:'bar',data:{labels:shorts,datasets:[
+    {label:'North',data:NR,backgroundColor:NC+'cc',borderColor:NC,borderWidth:1,borderRadius:3},
+    {label:'South',data:SR,backgroundColor:SC+'cc',borderColor:SC,borderWidth:1,borderRadius:3},
+  ]},options:{responsive:true,maintainAspectRatio:false,animation:{duration:900,easing:'easeOutQuart',delay:ctx=>ctx.dataIndex*45},
+    plugins:{legend:{display:false},tooltip:{...TOOLTIP,callbacks:{label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}%`}}},
+    scales:{x:{grid:{display:false},ticks:{font:{family:CF,size:10}}},y:{grid:{color:'rgba(43,29,14,.06)'},ticks:{font:{family:CF,size:10},callback:v=>v+'%'},title:{display:true,text:'% of squirrels',font:{size:10,family:CF}}}}}});
+  if(ch4Ratio)ch4Ratio.destroy();
+  const ratios=BEHS.map((b,i)=>{const n=NR[i],s=SR[i];return n<0.5?null:+(s/n).toFixed(2)});
+  ch4Ratio=new Chart(document.getElementById('chart-ratio'),{type:'bar',data:{labels:shorts,datasets:[{
+    data:ratios,backgroundColor:ratios.map(r=>r===null?'#ccc':r>1?SC+'cc':NC+'cc'),
+    borderColor:ratios.map(r=>r===null?'#ccc':r>1?SC:NC),borderWidth:1,borderRadius:3
+  }]},options:{responsive:true,maintainAspectRatio:false,animation:{duration:1000,easing:'easeOutElastic',delay:ctx=>ctx.dataIndex*55},
+    plugins:{legend:{display:false},tooltip:{...TOOLTIP,callbacks:{label:ctx=>{const v=ctx.parsed.y;if(!v)return' n/a';return v>1?` ${v.toFixed(1)}× more in south`:` ${(1/v).toFixed(1)}× more in north`}}}},
+    scales:{x:{grid:{display:false},ticks:{font:{family:CF,size:10}}},y:{grid:{color:'rgba(43,29,14,.06)'},ticks:{font:{family:CF,size:10},callback:v=>v+'×'},title:{display:true,text:'Ratio (1 = equal)',font:{size:10,family:CF}},min:0}}}});
+}
+
+/* ── EXPLORE ─────────────────────────────────────────────── */
+function buildExploreFilters(){
+  const wrap=document.getElementById('explore-filters');
+  Object.entries(BL).forEach(([key,label])=>{
+    const cnt=SQ.filter(s=>s[key]).length;
+    const btn=document.createElement('button'); btn.className='efpill on'; btn.id='ef-'+key;
+    btn.innerHTML=`<div class="leg-dot" style="background:${BC[key]};width:8px;height:8px;flex-shrink:0"></div>${label}<span class="efpill-cnt">${cnt}</span>`;
+    btn.onclick=()=>{
+      if(activeBeh.has(key)){activeBeh.delete(key);btn.classList.remove('on');if(expSqL[key]&&expLayers.sq)expSqL[key].remove()}
+      else{activeBeh.add(key);btn.classList.add('on');if(expSqL[key]&&expLayers.sq)expSqL[key].addTo(exploreMap)}
+      updateExploreCounts();
+    };
+    wrap.appendChild(btn);
+  });
+}
+function toggleLayer(key,el){
+  expLayers[key]=!expLayers[key]; el.classList.toggle('on',expLayers[key]);
+  if(key==='human'){expLayers.human?expZoneL.addTo(exploreMap):expZoneL.remove()}
+  if(key==='sq'){Object.keys(BC).forEach(b=>{if(!expSqL[b])return;(expLayers.sq&&activeBeh.has(b))?expSqL[b].addTo(exploreMap):expSqL[b].remove()})}
+  updateExploreCounts();
+}
+function updateExploreCounts(){
+  const vis=expLayers.sq?SQ.filter(s=>[...activeBeh].some(b=>s[b])).length:0;
+  document.getElementById('ev1').textContent=vis.toLocaleString();
+  document.getElementById('ev2').textContent=SSQ.filter(s=>s.approaches).length.toLocaleString();
+  document.getElementById('ev3').textContent=NSQ.filter(s=>s.runs_from).length.toLocaleString();
+}
+
+/* ── SCROLL PROGRESS + REVEALS ───────────────────────────── */
+function initProgress(){
+  const bar=document.getElementById('progress');
+  window.addEventListener('scroll',()=>{const el=document.documentElement;bar.style.width=(el.scrollTop/(el.scrollHeight-el.clientHeight)*100)+'%';},{passive:true});
+}
+function initReveals(){
+  const obs=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('vis')});},{threshold:.1});
+  document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+}
+
+loadAll();
 </script>
 </body>
 </html>

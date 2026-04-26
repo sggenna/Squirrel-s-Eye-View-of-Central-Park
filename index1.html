@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Squirrel's Eye View of Central Park</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ivory:#f9f6f1;
+  --cream:#f2ede6;
+  --linen:#e8e1d8;
+  --warm-gray:#c4bdb4;
+  --mid:#8a8278;
+  --dark:#2d2a26;
+  --ink:#1a1816;
+  --border:#ddd8d0;
+  --border2:#c8c2b8;
+  --red:#c94c3a;
+  --red-l:#fdf0ee;
+  --red-m:#f4c4bc;
+  --green:#2d7a4f;
+  --green-l:#edf6f1;
+  --green-m:#a8d9bc;
+  --blue:#2b5fa0;
+  --blue-l:#eef3fb;
+  --blue-m:#a8c2e8;
+  --amber:#b86a12;
+  --amber-l:#fdf4e8;
+  --amber-m:#f2c880;
+  --purple:#6b4fa0;
+  --purple-l:#f3f0fb;
+  --teal:#1a7a72;
+  --teal-l:#edf8f7;
+  --font:"Sora",sans-serif;
+  --mono:"JetBrains Mono",monospace;
+}
+html,body{height:100%;overflow:hidden;font-family:var(--font);background:var(--ivory);color:var(--ink)}
+
+/* HEADER */
+.hdr{
+  height:52px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 1.2rem;border-bottom:1px solid var(--border);
+  background:#fff;position:relative;z-index:1001;flex-shrink:0;
+}
+.hdr-left{display:flex;align-items:center;gap:1.2rem}
+.logo{display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;font-weight:600;color:var(--ink);letter-spacing:-0.01em}
+.logo-dot{width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0}
+.hdr-title{font-size:0.78rem;color:var(--mid);font-weight:400;border-left:1px solid var(--border);padding-left:1.2rem}
+.tabs{display:flex;gap:0}
+.tab{
+  padding:0 1rem;height:52px;font-size:0.76rem;font-weight:500;
+  color:var(--mid);cursor:pointer;border:none;background:none;
+  font-family:var(--font);border-bottom:2px solid transparent;
+  transition:all .15s;display:flex;align-items:center;gap:0.4rem;
+}
+.tab:hover{color:var(--dark)}
+.tab.on{color:var(--ink);border-bottom-color:var(--ink)}
+.hdr-pills{display:flex;gap:0.4rem}
+.hpill{
+  font-size:0.68rem;font-family:var(--mono);
+  padding:0.2rem 0.55rem;border-radius:2rem;
+  border:1px solid var(--border);color:var(--mid);background:var(--cream);
+}
+
+/* LAYOUT */
+.app{display:flex;height:calc(100vh - 52px)}
+.panel{display:none;flex:1;overflow:hidden}
+.panel.on{display:flex}
+
+/* MAP PANEL */
+.map-panel{flex:1;position:relative}
+#map{width:100%;height:100%;z-index:1}
+
+/* LEFT SIDEBAR */
+.sidebar{
+  width:232px;min-width:232px;background:#fff;border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow-y:auto;z-index:500;position:relative;
+}
+.sb-section{padding:1rem;border-bottom:1px solid var(--border)}
+.sb-label{
+  font-size:0.64rem;font-weight:600;text-transform:uppercase;letter-spacing:0.09em;
+  color:var(--warm-gray);margin-bottom:0.65rem;
+}
+.layer-row{
+  display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0;cursor:pointer;
+  font-size:0.75rem;color:var(--mid);transition:color .12s;
+}
+.layer-row:hover{color:var(--dark)}
+.layer-row.on{color:var(--ink)}
+.toggle{
+  width:28px;height:16px;border-radius:8px;border:1px solid var(--border2);
+  background:var(--cream);position:relative;cursor:pointer;flex-shrink:0;transition:all .2s;
+}
+.toggle.on{background:var(--ink);border-color:var(--ink)}
+.toggle::after{
+  content:'';position:absolute;top:2px;left:2px;
+  width:10px;height:10px;border-radius:50%;background:#fff;transition:left .2s;
+}
+.toggle.on::after{left:14px}
+.clr-swatch{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+
+/* BEHAVIOR BUTTONS */
+.beh-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.3rem}
+.bb{
+  padding:0.35rem 0.4rem;border-radius:5px;border:1px solid var(--border);
+  background:var(--cream);color:var(--mid);font-size:0.7rem;font-family:var(--font);
+  cursor:pointer;transition:all .15s;text-align:center;
+}
+.bb:hover{border-color:var(--border2);color:var(--dark)}
+.bb.on{font-weight:500}
+
+/* FUR PILLS */
+.fur-row{display:flex;gap:0.3rem;flex-wrap:wrap}
+.fp{
+  padding:0.25rem 0.6rem;border-radius:2rem;border:1px solid var(--border);
+  background:var(--cream);color:var(--mid);font-size:0.7rem;cursor:pointer;transition:all .15s;
+}
+.fp:hover{border-color:var(--border2)}
+.fp.on{border-color:var(--ink);background:var(--ink);color:#fff}
+
+/* STAT CARDS */
+.stat-grid{display:flex;flex-direction:column;gap:0.4rem}
+.sc{
+  background:var(--cream);border-radius:6px;padding:0.55rem 0.7rem;
+  border:1px solid var(--border);
+}
+.sc-val{font-size:1.3rem;font-weight:600;font-family:var(--mono);line-height:1}
+.sc-lbl{font-size:0.66rem;color:var(--mid);margin-top:0.2rem}
+
+/* MAP TOOLTIP */
+.leaflet-popup-content-wrapper{
+  border-radius:10px!important;box-shadow:0 4px 24px rgba(0,0,0,0.1)!important;
+  border:1px solid var(--border)!important;padding:0!important;
+}
+.pop{padding:0.8rem 1rem;min-width:160px;font-family:var(--font)}
+.pop-name{font-size:0.82rem;font-weight:600;color:var(--ink);margin-bottom:0.5rem}
+.pop-row{display:flex;justify-content:space-between;gap:1rem;font-size:0.72rem;color:var(--mid);margin:0.2rem 0}
+.pop-row span:last-child{font-family:var(--mono);font-size:0.7rem;color:var(--ink);font-weight:500}
+
+/* LEGEND */
+.map-legend{
+  position:absolute;bottom:24px;right:12px;background:#fff;
+  border:1px solid var(--border);border-radius:10px;padding:0.8rem 1rem;
+  z-index:500;min-width:148px;box-shadow:0 2px 12px rgba(0,0,0,0.06);
+}
+.leg-title{font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--warm-gray);margin-bottom:0.5rem;font-weight:600}
+.leg-body{}
+.leg-row{display:flex;align-items:center;gap:0.5rem;font-size:0.72rem;color:var(--mid);margin:0.28rem 0}
+.leg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;border:1px solid rgba(0,0,0,0.08)}
+.leg-bar{height:6px;border-radius:3px;flex-shrink:0}
+
+/* SOURCE NOTE */
+.src-note{
+  position:absolute;bottom:8px;left:50%;transform:translateX(-50%);
+  font-size:0.62rem;color:var(--warm-gray);z-index:500;
+  background:rgba(255,255,255,0.85);padding:0.2rem 0.6rem;border-radius:2rem;
+  border:1px solid var(--border);white-space:nowrap;
+}
+
+/* CHART PANEL */
+.chart-panel{
+  flex:1;display:flex;flex-direction:column;
+  background:var(--ivory);overflow-y:auto;
+}
+.cp-inner{padding:1.5rem 1.8rem;display:flex;flex-direction:column;gap:1.2rem;max-width:1100px}
+.insight-strip{display:grid;grid-template-columns:repeat(6,1fr);gap:0.6rem}
+.ik{
+  background:#fff;border:1px solid var(--border);border-radius:10px;
+  padding:0.8rem 0.9rem;
+}
+.ik-num{font-size:1.35rem;font-weight:600;font-family:var(--mono);line-height:1}
+.ik-lbl{font-size:0.67rem;color:var(--mid);margin-top:0.25rem;line-height:1.4}
+.chart-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.cc{
+  background:#fff;border:1px solid var(--border);border-radius:10px;padding:1.1rem;
+}
+.cc h4{
+  font-size:0.68rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;
+  color:var(--warm-gray);margin-bottom:1rem;
+}
+.corr-block{background:#fff;border:1px solid var(--border);border-radius:10px;padding:1.1rem}
+.corr-block h4{
+  font-size:0.68rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;
+  color:var(--warm-gray);margin-bottom:0.8rem;
+}
+.cb-row{margin:0.45rem 0}
+.cb-labels{display:flex;justify-content:space-between;font-size:0.7rem;margin-bottom:0.22rem}
+.cb-labels span:first-child{color:var(--dark)}
+.cb-labels span:last-child{font-family:var(--mono);font-size:0.67rem;color:var(--mid)}
+.cb-track{height:5px;background:var(--cream);border-radius:3px;overflow:hidden}
+.cb-fill{height:100%;border-radius:3px;transition:width .5s ease}
+.src-info{
+  background:#fff;border:1px solid var(--border);border-radius:10px;padding:1.1rem;
+  font-size:0.75rem;color:var(--mid);line-height:1.7;
+}
+.src-info strong{color:var(--dark);font-weight:500}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-left">
+    <div class="logo"><span class="logo-dot"></span>Squirrel's Eye View of Central Park</div>
+    <div class="hdr-title">Squirrels × Human Footprint · 2018 Squirrel Census & NYC Open Data</div>
+  </div>
+  <div class="tabs">
+    <button class="tab on" onclick="switchView('map')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3,6 9,3 15,6 21,3 21,18 15,21 9,18 3,21"/></svg>
+      Map
+    </button>
+    <button class="tab" onclick="switchView('charts')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Analysis
+    </button>
+  </div>
+  <div class="hdr-pills">
+    <span class="hpill" id="pill-sq">Loading...</span>
+    <span class="hpill">37.5M annual visits</span>
+    <span class="hpill">843 acres</span>
+  </div>
+</div>
+
+<div class="app">
+
+  <!-- MAP PANEL -->
+  <div class="panel on" id="pmap" style="flex-direction:row">
+    <div class="sidebar" id="sidebar">
+
+      <div class="sb-section">
+        <div class="sb-label">Layers</div>
+        <div class="layer-row on" id="lr-sq" onclick="toggleLayer('sq')">
+          <div class="toggle on" id="tg-sq"></div>
+          <span class="clr-swatch" style="background:var(--red)"></span>
+          Squirrel sightings
+        </div>
+        <div class="layer-row on" id="lr-heat" onclick="toggleLayer('heat')">
+          <div class="toggle on" id="tg-heat"></div>
+          <span class="clr-swatch" style="background:var(--red);opacity:0.4;border-radius:0"></span>
+          Behavior heatmap
+        </div>
+        <div class="layer-row on" id="lr-human" onclick="toggleLayer('human')">
+          <div class="toggle on" id="tg-human"></div>
+          <span class="clr-swatch" style="background:var(--blue)"></span>
+          Human foot traffic
+        </div>
+        <div class="fur-row" style="margin-top:0.4rem; padding-left: 2rem;">
+          <button class="fp on" id="tm-intensity" onclick="setTrafficMode('intensity')">By Intensity</button>
+          <button class="fp" id="tm-volume" onclick="setTrafficMode('volume')">By Volume</button>
+        </div>
+      </div>
+
+      <div class="sb-section">
+        <div class="sb-label">Behavior</div>
+        <div class="beh-grid">
+          <button class="bb on" id="bb-runs_from" onclick="setBeh('runs_from')">Flees humans</button>
+          <button class="bb" id="bb-approaches" onclick="setBeh('approaches')">Approaches</button>
+          <button class="bb" id="bb-indifferent" onclick="setBeh('indifferent')">Indifferent</button>
+          <button class="bb" id="bb-foraging" onclick="setBeh('foraging')">Foraging</button>
+          <button class="bb" id="bb-eating" onclick="setBeh('eating')">Eating</button>
+          <button class="bb" id="bb-climbing" onclick="setBeh('climbing')">Climbing</button>
+          <button class="bb" id="bb-running" onclick="setBeh('running')">Running</button>
+          <button class="bb" id="bb-kuks" onclick="setBeh('kuks')">Alarm calls</button>
+        </div>
+      </div>
+
+      <div class="sb-section">
+        <div class="sb-label">Fur color</div>
+        <div class="fur-row">
+          <button class="fp on" id="fp-all" onclick="setFur('all')">All</button>
+          <button class="fp" id="fp-G" onclick="setFur('G')">Gray</button>
+          <button class="fp" id="fp-C" onclick="setFur('C')">Cinnamon</button>
+          <button class="fp" id="fp-B" onclick="setFur('B')">Black</button>
+        </div>
+      </div>
+
+      <div class="sb-section" style="border-bottom:none">
+        <div class="sb-label">Stats</div>
+        <div class="stat-grid">
+          <div class="sc">
+            <div class="sc-val" id="sv1" style="color:var(--red)">0</div>
+            <div class="sc-lbl" id="sl1">squirrels fleeing humans</div>
+          </div>
+          <div class="sc">
+            <div class="sc-val" id="sv2" style="color:var(--dark)">0%</div>
+            <div class="sc-lbl" id="sl2">flee rate (all sightings)</div>
+          </div>
+          <div class="sc">
+            <div class="sc-val" id="sv3" style="color:var(--green)">0</div>
+            <div class="sc-lbl">approached humans willingly</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="map-panel">
+      <div id="map"></div>
+
+      <div class="map-legend" id="map-legend">
+        <div class="leg-title" id="leg-title">Behavior: Flees humans</div>
+        <div id="leg-body"></div>
+      </div>
+
+      <div class="src-note">
+        Map: © OpenStreetMap  Foot traffic: Central Park Conservancy 2009  Squirrels: NYC 2018 Census
+      </div>
+    </div>
+  </div>
+
+  <!-- CHART PANEL -->
+  <div class="panel" id="pcharts">
+    <div class="chart-panel">
+      <div class="cp-inner">
+
+        <div class="insight-strip">
+          <div class="ik"><div class="ik-num" id="ins-flee" style="color:var(--red)">0%</div><div class="ik-lbl">flee from human encounters</div></div>
+          <div class="ik"><div class="ik-num" id="ins-indif" style="color:var(--dark)">0%</div><div class="ik-lbl">indifferent to humans</div></div>
+          <div class="ik"><div class="ik-num" id="ins-appr" style="color:var(--green)">0%</div><div class="ik-lbl">actively approach humans</div></div>
+          <div class="ik"><div class="ik-num" id="ins-forage" style="color:var(--amber)">0%</div><div class="ik-lbl">observed foraging</div></div>
+          <div class="ik"><div class="ik-num" style="color:var(--blue)">37.5M</div><div class="ik-lbl">annual park visits by humans</div></div>
+          <div class="ik"><div class="ik-num" id="ins-south" style="color:var(--purple)">0×</div><div class="ik-lbl">higher flee rate in south vs north</div></div>
+        </div>
+
+        <div class="chart-row">
+          <div class="cc">
+            <h4>Response to human presence</h4>
+            <div style="position:relative;height:200px"><canvas id="ch1" role="img">Loading chart...</canvas></div>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:0.8rem">
+              <span style="display:flex;align-items:center;gap:5px;font-size:0.7rem;color:var(--mid)"><span style="width:9px;height:9px;border-radius:2px;background:#c94c3a"></span>Flees</span>
+              <span style="display:flex;align-items:center;gap:5px;font-size:0.7rem;color:var(--mid)"><span style="width:9px;height:9px;border-radius:2px;background:#2d2a26"></span>Indifferent</span>
+              <span style="display:flex;align-items:center;gap:5px;font-size:0.7rem;color:var(--mid)"><span style="width:9px;height:9px;border-radius:2px;background:#2d7a4f"></span>Approaches</span>
+              <span style="display:flex;align-items:center;gap:5px;font-size:0.7rem;color:var(--mid)"><span style="width:9px;height:9px;border-radius:2px;background:#e8e1d8"></span>Other</span>
+            </div>
+          </div>
+          <div class="cc">
+            <h4>Activity counts</h4>
+            <div style="position:relative;height:200px"><canvas id="ch2" role="img">Activity counts</canvas></div>
+          </div>
+        </div>
+
+        <div class="corr-block">
+          <h4>Flee rate vs annual human visits by park zone (Conservancy entrance data, 2009)</h4>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 1.5rem" id="corr-rows"></div>
+          <p style="font-size:0.73rem;color:var(--mid);margin-top:1rem;line-height:1.7">
+            <strong style="color:var(--dark)">Key finding:</strong> Zones receiving 4M+ annual visits (Wollman Rink, SW Corner/Merchants Gate, Great Lawn) show flee rates 2.5 to 3× higher than quieter northern zones. The pattern suggests sustained human density creates two distinct squirrel populations: a habituated majority (indifferent) and a stress-conditioned minority that flees immediately. Both the 2018 Census and 2009 Conservancy survey point to the same southern concentration of activity as the driver.
+          </p>
+        </div>
+
+        <div class="chart-row">
+          <div class="cc">
+            <h4>Behavior by fur color</h4>
+            <div style="position:relative;height:200px"><canvas id="ch3" role="img">Behavior by fur color</canvas></div>
+            <div style="display:flex;gap:12px;margin-top:0.8rem">
+              <span style="display:flex;align-items:center;gap:5px;font-size:0.7rem;color:var(--mid)"><span style="width:9px;height:9px;border-radius:2px;background:#c94c3a"></span>Flees</span>
+              <span style="display:flex;align-items:center;gap:5px;font-size:0.7rem;color:var(--mid)"><span style="width:9px;height:9px;border-radius:2px;background:#2d7a4f"></span>Approaches</span>
+              <span style="display:flex;align-items:center;gap:5px;font-size:0.7rem;color:var(--mid)"><span style="width:9px;height:9px;border-radius:2px;background:#2b5fa0"></span>Indifferent</span>
+            </div>
+          </div>
+          <div class="cc">
+            <h4>AM vs PM sightings by behavior</h4>
+            <div style="position:relative;height:200px"><canvas id="ch4" role="img">AM vs PM behavior</canvas></div>
+            <div style="display:flex;gap:12px;margin-top:0.8rem">
+              <span style="display:flex;align-items:center;gap:5px;font-size:0.7rem;color:var(--mid)"><span style="width:9px;height:9px;border-radius:2px;background:#c94c3a"></span>AM shift</span>
+              <span style="display:flex;align-items:center;gap:5px;font-size:0.7rem;color:var(--mid)"><span style="width:9px;height:9px;border-radius:2px;background:#2b5fa0"></span>PM shift</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="src-info">
+          <strong>About the data:</strong> This application uses the original datasets from the <strong>2018 NYC Squirrel Census</strong> and the <strong>2009 Central Park Conservancy Visitor Survey</strong>.
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script>
+let SQ = [];
+let VOLUME_DATA = [];
+let INTENSITY_DATA = [];
+let ZONE_DATA = null;
+let HECTARE_DATA = null;
+let humanLayerContainer = L.layerGroup();
+let heatLayer = L.layerGroup();
+let sqLayer = L.layerGroup();
+
+const ZONE_MAPPING = {
+  1: 'Northwest Corner', 2: 'North Woods', 3: 'Harlem Meer & Lasker Rink', 4: 'Great Hill',
+  5: 'The Ravine', 6: 'The Mount', 7: 'Conservatory Garden', 8: 'The Pool',
+  9: 'North Meadow & Recreation Center', 10: 'East Meadow', 11: 'W90s Landscape/Playgrounds',
+  12: 'Tennis Courts', 13: 'The Reservoir', 14: 'West 86 - 90 Landscape',
+  15: 'Summit Rock/W 80s Playgrounds', 16: 'Great Lawn & The Belvedere',
+  17: 'Metropolitan Museum Landscape', 18: "Naturalists' Walk", 19: 'Ramble & The Lake',
+  20: 'Cedar Hill', 21: 'Strawberry Fields', 22: 'Bethesda Terrace & Cherry Hill',
+  23: 'Conservatory Water', 24: 'W. 60s/Tavern on Green', 25: 'Sheep Meadow',
+  26: 'The Mall', 27: 'The Dene & East Green', 28: 'Southwest Corner',
+  29: 'Heckscher Playground/Ball Fields', 30: 'The Pond & Wollman Rink',
+  31: 'The Zoo, Arsenal, & Wein Walk', 32: 'Grand Army Plaza', 33: 'Drives & Bridle Trail'
+};
+
+let curBeh = 'runs_from';
+let curFur = 'all';
+let trafficMode = 'intensity';
+let layers = {sq:true, heat:true, human:true};
+
+const map = L.map('map', {
+  center: [40.7830, -73.9660],
+  zoom: 14,
+  zoomControl: true,
+  attributionControl: false
+});
+
+// Setup Panes for Z-index management
+map.createPane('polygons');
+map.getPane('polygons').style.zIndex = 400;
+map.createPane('squirrels');
+map.getPane('squirrels').style.zIndex = 425;
+map.createPane('heatmaps');
+map.getPane('heatmaps').style.zIndex = 450;
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  attribution:'&copy; OpenStreetMap &copy; CartoDB',
+  subdomains:'abcd', maxZoom:19
+}).addTo(map);
+
+L.control.attribution({position:'bottomright'}).addTo(map);
+
+humanLayerContainer.addTo(map);
+heatLayer.addTo(map);
+sqLayer.addTo(map);
+
+function fmt(n){return n>=1000000?(n/1000000).toFixed(1)+'M':n>=1000?(n/1000).toFixed(0)+'K':n}
+
+function drawSq(){
+  sqLayer.clearLayers();
+  if(!layers.sq) return;
+  const col = BEH_COLORS[curBeh];
+  
+  SQ.forEach(s=>{
+    if(curFur!=='all' && s.color!==curFur) return;
+    
+    const active = !!s[curBeh];
+    const fillColor = active ? col : '#7a7570';
+    const fillOp = active ? 1.0 : 0.1;
+    
+    L.circleMarker([s.lat,s.lng],{
+      radius: 1.8, 
+      color: 'none', 
+      weight: 0, 
+      fillColor: fillColor, 
+      fillOpacity: fillOp, 
+      pane: 'squirrels'
+    }).addTo(sqLayer);
+  });
+}
+
+function drawHeat(){
+  heatLayer.clearLayers();
+  if(!layers.heat || !HECTARE_DATA) return;
+  const col = BEH_COLORS[curBeh];
+  
+  const gridCounts = {};
+  SQ.forEach(s => {
+    if(curFur!=='all' && s.color!==curFur) return;
+    if(!s[curBeh]) return;
+    if(s.grid_id) gridCounts[s.grid_id] = (gridCounts[s.grid_id] || 0) + 1;
+  });
+
+  const vals = Object.values(gridCounts);
+  if(vals.length === 0) return;
+  const maxC = Math.max(...vals);
+
+  L.geoJSON(HECTARE_DATA, {
+    pointToLayer: function(feature, latlng) {
+      const gid = feature.properties.grid_id;
+      const count = gridCounts[gid] || 0;
+      if (count === 0) return null;
+      
+      const intensity = count / maxC;
+      const radius = 20 + intensity * 60; 
+      
+      const m = L.circle(latlng, {
+        pane: 'heatmaps',
+        radius,
+        fillColor: col,
+        fillOpacity: 0.5 + intensity * 0.4,
+        color: col,
+        weight: 1,
+        opacity: 0.3
+      });
+      m.bindTooltip(`Hectare ${feature.properties.hectare || 'Unknown'}: ${count} sightings`);
+      return m;
+    }
+  }).addTo(heatLayer);
+}
+
+function drawHuman(){
+  humanLayerContainer.clearLayers();
+  if(!layers.human || !ZONE_DATA) return;
+  
+  const getIntensityOpacity = (val) => {
+    if (val >= 500000) return 0.90;
+    if (val >= 300000) return 0.75;
+    if (val >= 250000) return 0.60;
+    if (val >= 200000) return 0.50;
+    if (val >= 150000) return 0.40;
+    if (val >= 100000) return 0.30;
+    if (val >= 50000)  return 0.15;
+    return 0.05;
+  };
+
+  const getVolumeOpacity = (val) => {
+    if (val >= 5000000) return 0.90;
+    if (val >= 4000000) return 0.70;
+    if (val >= 3000000) return 0.50;
+    if (val >= 2000000) return 0.35;
+    if (val >= 1000000) return 0.20;
+    return 0.08;
+  };
+
+  L.geoJSON(ZONE_DATA, {
+    pane: 'polygons',
+    style: function(feature) {
+      const zoneId = parseInt(feature.properties.zone);
+      const name = ZONE_MAPPING[zoneId];
+      
+      let opacity = 0.05;
+      if (trafficMode === 'intensity') {
+        const match = INTENSITY_DATA.find(v => v.Name === name);
+        opacity = getIntensityOpacity(match ? match['Visits/Acre'] : 0);
+      } else {
+        const match = VOLUME_DATA.find(v => v.Name === name);
+        opacity = getVolumeOpacity(match ? match['Estimated Visits'] : 0);
+      }
+      
+      return {
+        fillColor: '#2b5fa0',
+        fillOpacity: opacity,
+        color: '#2b5fa0',
+        weight: 1,
+        opacity: 0.15
+      };
+    },
+    onEachFeature: function(feature, layer) {
+      const zoneId = parseInt(feature.properties.zone);
+      const name = ZONE_MAPPING[zoneId];
+      const matchI = INTENSITY_DATA.find(v => v.Name === name);
+      const matchV = VOLUME_DATA.find(v => v.Name === name);
+      const intensity = matchI ? matchI['Visits/Acre'] : 0;
+      const visits = matchV ? matchV['Estimated Visits'] : 0;
+      layer.bindTooltip(`<strong>${name}</strong><br>Intensity: ${intensity.toLocaleString()} visits/acre<br>Total: ${fmt(visits)} visits/yr`);
+    }
+  }).addTo(humanLayerContainer);
+}
+
+function setTrafficMode(m) {
+  trafficMode = m;
+  document.getElementById('tm-intensity').classList.toggle('on', m === 'intensity');
+  document.getElementById('tm-volume').classList.toggle('on', m === 'volume');
+  drawHuman();
+}
+
+function redrawAll(){drawSq();drawHeat();}
+
+const BEH_COLORS = {
+  runs_from:'#c94c3a', approaches:'#2d7a4f', indifferent:'#2b5fa0',
+  foraging:'#b86a12', eating:'#d4882a', climbing:'#6b4fa0',
+  running:'#1a7a72', kuks:'#a03a6b'
+};
+
+const BEH_LABELS = {
+  runs_from:'Flees humans', approaches:'Approaches humans', indifferent:'Indifferent',
+  foraging:'Foraging', eating:'Eating', climbing:'Climbing',
+  running:'Running', kuks:'Alarm calls (kuks)'
+};
+
+function updateLegend(){
+  const col = BEH_COLORS[curBeh];
+  const legTitle = document.getElementById('leg-title');
+  if(!legTitle) return;
+  legTitle.textContent = 'Behavior: '+BEH_LABELS[curBeh];
+  const filtered = SQ.filter(s=>curFur==='all'||s.color===curFur);
+  const count = filtered.filter(s=>s[curBeh]).length;
+  const pct = filtered.length?Math.round(count/filtered.length*100):0;
+  const legBody = document.getElementById('leg-body');
+  if(legBody) {
+    legBody.innerHTML=`
+      <div class="leg-row"><div class="leg-dot" style="background:${col}"></div><span style="color:#2d2a26;font-weight:500">${BEH_LABELS[curBeh]}</span></div>
+      <div class="leg-row" style="padding-left:20px;font-size:0.68rem;color:#8a8278">${count.toLocaleString()} squirrels (${pct}%)</div>
+      <div style="margin:0.5rem 0 0.3rem;height:1px;background:#e8e1d8"></div>
+      <div class="leg-row"><div class="leg-bar" style="width:32px;background:#2b5fa0;opacity:0.35"></div>Human traffic intensity</div>
+      <div class="leg-row"><div class="leg-dot" style="background:#c4bdb4;opacity:0.5"></div>Squirrel (other)</div>
+    `;
+  }
+}
+
+function updateStats(){
+  const filtered = SQ.filter(s=>curFur==='all'||s.color===curFur);
+  const count = filtered.filter(s=>s[curBeh]).length;
+  const pct = filtered.length?((count/filtered.length)*100).toFixed(1):0;
+  const appCount = filtered.filter(s=>s.approaches).length;
+  document.getElementById('sv1').textContent=count.toLocaleString();
+  document.getElementById('sl1').textContent=BEH_LABELS[curBeh]+' ('+curFur+')';
+  document.getElementById('sv2').textContent=pct+'%';
+  document.getElementById('sl2').textContent=curBeh.replace('_',' ')+' rate';
+  document.getElementById('sv3').textContent=appCount.toLocaleString();
+}
+
+function toggleLayer(l){
+  layers[l]=!layers[l];
+  const tg = document.getElementById('tg-'+l);
+  const lr = document.getElementById('lr-'+l);
+  if(tg) tg.classList.toggle('on',layers[l]);
+  if(lr) lr.classList.toggle('on',layers[l]);
+  
+  if(l==='sq') drawSq();
+  else if(l==='heat') drawHeat();
+  else if(l==='human') drawHuman();
+}
+
+function setBeh(b){
+  curBeh=b;
+  document.querySelectorAll('.bb').forEach(el=>{
+    const on=el.id==='bb-'+b;
+    el.classList.toggle('on',on);
+    const col=BEH_COLORS[b];
+    if(on){el.style.background=col+'18';el.style.borderColor=col+'55';el.style.color=col;}
+    else{el.style.background='';el.style.borderColor='';el.style.color='';}
+  });
+  updateLegend(); updateStats(); redrawAll();
+}
+
+function setFur(f){
+  curFur=f;
+  document.querySelectorAll('.fp').forEach(el=>{
+    el.classList.toggle('on',el.id==='fp-'+f);
+  });
+  updateLegend(); updateStats(); redrawAll();
+}
+
+function switchView(v){
+  document.getElementById('pmap').classList.toggle('on',v==='map');
+  document.getElementById('pcharts').classList.toggle('on',v==='charts');
+  document.querySelectorAll('.tab').forEach((t,i)=>{
+    t.classList.toggle('on',(i===0&&v==='map')||(i===1&&v==='charts'));
+  });
+  if(v==='map') setTimeout(()=>map.invalidateSize(),50);
+}
+
+// Simple Point-in-Polygon for Aggregation
+function isInside(point, vs) {
+  var x = point[0], y = point[1];
+  var inside = false;
+  for (var i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+    var xi = vs[i][0], yi = vs[i][1];
+    var xj = vs[j][0], yj = vs[j][1];
+    var intersect = ((yi > y) != (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+// Data Loading
+async function loadData() {
+  const [sqRes, volRes, intRes, zoneRes, hectRes] = await Promise.all([
+    fetch('data/Squirrel_Data.csv'),
+    fetch('data/volume_of_use_by_area.csv'),
+    fetch('data/intensity_of_use_by_area.csv'),
+    fetch('data/zoneboundries.geojson'),
+    fetch('data/hectares.geojson')
+  ]);
+  
+  const [sqText, volText, intText, zoneData, hectData] = await Promise.all([
+    sqRes.text(),
+    volRes.text(),
+    intRes.text(),
+    zoneRes.json(),
+    hectRes.json()
+  ]);
+
+  ZONE_DATA = zoneData;
+  HECTARE_DATA = hectData;
+
+  Papa.parse(volText, {
+    header: true,
+    dynamicTyping: true,
+    skipEmptyLines: true,
+    complete: function(results) {
+      VOLUME_DATA = results.data;
+    }
+  });
+
+  Papa.parse(intText, {
+    header: true,
+    dynamicTyping: true,
+    skipEmptyLines: true,
+    complete: function(results) {
+      INTENSITY_DATA = results.data;
+    }
+  });
+  
+  Papa.parse(sqText, {
+    header: true,
+    dynamicTyping: true,
+    skipEmptyLines: true,
+    complete: function(results) {
+      SQ = results.data.map(r => {
+        if (!r.X || !r.Y) return null;
+        const val = v => (v === true || v === 'true' || v === 'TRUE');
+        
+        // Find which hectare polygon this squirrel belongs to spatially
+        let gridId = null;
+        for (const feature of HECTARE_DATA.features) {
+           if (isInside([r.X, r.Y], feature.properties.poly[0])) {
+             gridId = feature.properties.grid_id;
+             break;
+           }
+        }
+
+        return {
+          lng: r.X, lat: r.Y,
+          grid_id: gridId,
+          hectare: r['Hectare'],
+          color: r['Primary Fur Color'] ? r['Primary Fur Color'][0] : 'U',
+          age: r['Age'] ? r['Age'][0] : 'U',
+          shift: r['Shift'],
+          runs_from: val(r['Runs from']),
+          approaches: val(r['Approaches']),
+          indifferent: val(r['Indifferent']),
+          foraging: val(r['Foraging']),
+          eating: val(r['Eating']),
+          climbing: val(r['Climbing']),
+          running: val(r['Running']),
+          chasing: val(r['Chasing']),
+          kuks: val(r['Kuks']),
+          tail_flags: val(r['Tail flags'])
+        };
+      }).filter(s => s !== null);
+      
+      drawHuman();
+      initApp();
+    }
+  });
+}
+
+function initApp() {
+  document.getElementById('pill-sq').textContent = SQ.length.toLocaleString() + ' squirrels';
+  setBeh('runs_from');
+  initCharts();
+  updateCorrelationBars();
+  updateInsights();
+}
+
+const CHART_OPTS = {
+  responsive:true, maintainAspectRatio:false,
+  plugins:{legend:{display:false}},
+};
+const GRID = {grid:{color:'#f2ede6'},ticks:{color:'#8a8278',font:{size:10}}};
+
+function initCharts() {
+  const flees = SQ.filter(s=>s.runs_from).length;
+  const appr = SQ.filter(s=>s.approaches).length;
+  const indif = SQ.filter(s=>s.indifferent).length;
+  const other = SQ.length - flees - appr - indif;
+  const pct = v => (v/SQ.length*100).toFixed(1);
+
+  new Chart(document.getElementById('ch1'),{
+    type:'doughnut',
+    data:{
+      labels:['Flees','Indifferent','Approaches','Other'],
+      datasets:[{data:[pct(flees),pct(indif),pct(appr),pct(other)],
+        backgroundColor:['#c94c3a','#2d2a26','#2d7a4f','#e8e1d8'],
+        borderWidth:3,borderColor:'#ffffff',hoverOffset:5}]
+    },
+    options:{...CHART_OPTS,cutout:'62%'}
+  });
+
+  const acts = {
+    'Indifferent': indif,
+    'Foraging': SQ.filter(s=>s.foraging).length,
+    'Eating': SQ.filter(s=>s.eating).length,
+    'Running': SQ.filter(s=>s.running).length,
+    'Climbing': SQ.filter(s=>s.climbing).length,
+    'Flees': flees,
+    'Chasing': SQ.filter(s=>s.chasing).length,
+    'Approaches': appr,
+    'Alarm calls': SQ.filter(s=>s.kuks).length
+  };
+  const sortedActs = Object.entries(acts).sort((a,b)=>b[1]-a[1]);
+
+  new Chart(document.getElementById('ch2'),{
+    type:'bar',
+    data:{
+      labels: sortedActs.map(a=>a[0]),
+      datasets:[{
+        data: sortedActs.map(a=>a[1]),
+        backgroundColor: sortedActs.map(a=>BEH_COLORS[a[0].toLowerCase().replace(' ','_')] || '#2d2a26'),
+        borderRadius:3,borderWidth:0
+      }]
+    },
+    options:{...CHART_OPTS,indexAxis:'y',scales:{
+      x:{...GRID},y:{grid:{display:false},ticks:{color:'#8a8278',font:{size:10}}}
+    }}
+  });
+
+  const colors = ['G','C','B'];
+  const furData = colors.map(c => {
+    const sub = SQ.filter(s=>s.color===c);
+    if(sub.length === 0) return {flee:0,appr:0,indif:0};
+    return {
+      flee: (sub.filter(s=>s.runs_from).length / sub.length * 100).toFixed(0),
+      appr: (sub.filter(s=>s.approaches).length / sub.length * 100).toFixed(0),
+      indif: (sub.filter(s=>s.indifferent).length / sub.length * 100).toFixed(0)
+    };
+  });
+
+  new Chart(document.getElementById('ch3'),{
+    type:'bar',
+    data:{
+      labels:['Gray','Cinnamon','Black'],
+      datasets:[
+        {label:'Flees',data:furData.map(d=>d.flee),backgroundColor:'#c94c3a',borderRadius:2},
+        {label:'Approaches',data:furData.map(d=>d.appr),backgroundColor:'#2d7a4f',borderRadius:2},
+        {label:'Indifferent',data:furData.map(d=>d.indif),backgroundColor:'#2b5fa0',borderRadius:2}
+      ]
+    },
+    options:{...CHART_OPTS,scales:{
+      x:{...GRID,grid:{display:false}},
+      y:{...GRID,title:{display:true,text:'% of sightings',color:'#8a8278',font:{size:10}},max:70}
+    }}
+  });
+
+  const getShiftData = (shift) => {
+    const sub = SQ.filter(s=>s.shift===shift);
+    if(sub.length === 0) return [0,0,0,0,0];
+    return [
+      (sub.filter(s=>s.runs_from).length/sub.length*100).toFixed(0),
+      (sub.filter(s=>s.approaches).length/sub.length*100).toFixed(0),
+      (sub.filter(s=>s.foraging).length/sub.length*100).toFixed(0),
+      (sub.filter(s=>s.eating).length/sub.length*100).toFixed(0),
+      (sub.filter(s=>s.climbing).length/sub.length*100).toFixed(0)
+    ];
+  };
+
+  new Chart(document.getElementById('ch4'),{
+    type:'bar',
+    data:{
+      labels:['Flees','Approaches','Foraging','Eating','Climbing'],
+      datasets:[
+        {label:'AM',data:getShiftData('AM'),backgroundColor:'#c94c3a',borderRadius:2},
+        {label:'PM',data:getShiftData('PM'),backgroundColor:'#2b5fa0',borderRadius:2}
+      ]
+    },
+    options:{...CHART_OPTS,scales:{
+      x:{...GRID,grid:{display:false}},
+      y:{...GRID,title:{display:true,text:'%',color:'#8a8278',font:{size:10}}}
+    }}
+  });
+}
+
+function updateCorrelationBars() {
+  const corrData=[
+    {zone:'Wollman Rink',lat:40.7688,lng:-73.9758,csvArea:'The Pond & Wollman Rink'},
+    {zone:'SW Corner',lat:40.7684,lng:-73.9796,csvArea:'Southwest Corner'},
+    {zone:'Great Lawn',lat:40.7815,lng:-73.9651,csvArea:'Great Lawn & The Belvedere'},
+    {zone:'Heckscher Ballfields',lat:40.7692,lng:-73.9786,csvArea:'Heckscher Playground/Ball Fields'},
+    {zone:'Reservoir',lat:40.7853,lng:-73.9652,csvArea:'The Reservoir'},
+    {zone:'Central Park Zoo',lat:40.7676,lng:-73.9718,csvArea:'The Zoo, Arsenal, & Wein Walk'},
+    {zone:'Sheep Meadow',lat:40.7713,lng:-73.9769,csvArea:'Sheep Meadow'},
+    {zone:'Bethesda Terrace',lat:40.7741,lng:-73.9712,csvArea:'Bethesda Terrace & Cherry Hill'},
+    {zone:'Strawberry Fields',lat:40.7755,lng:-73.9742,csvArea:'Strawberry Fields'},
+    {zone:'Harlem Meer',lat:40.7963,lng:-73.9538,csvArea:'Harlem Meer & Lasker Rink'},
+    {zone:'North Meadow',lat:40.7932,lng:-73.9615,csvArea:'North Meadow & Recreation Center'},
+    {zone:'Great Hill',lat:40.792,lng:-73.968,csvArea:'Great Hill'},
+  ];
+  const corrEl = document.getElementById('corr-rows');
+  if(!corrEl) return;
+  corrEl.innerHTML = '';
+  corrData.forEach(d=>{
+    const match = VOLUME_DATA.find(v => v.Name === d.csvArea);
+    const visits = match ? match['Estimated Visits'] : 0;
+    const visitsM = (visits / 1000000).toFixed(1);
+
+    const totalNearby = SQ.filter(s=>{
+      const dlat=s.lat-d.lat, dlng=s.lng-d.lng;
+      return Math.sqrt(dlat*dlat+dlng*dlng)<0.006;
+    }).length;
+    const fleeNearby = SQ.filter(s=>{
+      const dlat=s.lat-d.lat, dlng=s.lng-d.lng;
+      return Math.sqrt(dlat*dlat+dlng*dlng)<0.006 && s.runs_from;
+    }).length;
+    const flee = totalNearby ? Math.round(fleeNearby/totalNearby*100) : 0;
+    
+    const inten = flee/35;
+    const col = `hsl(${10 + inten*20},${55 + inten*25}%,${55 - inten*18}%)`;
+    corrEl.innerHTML+=`<div class="cb-row">
+      <div class="cb-labels">
+        <span>${d.zone}</span>
+        <span style="color:${col}">${flee}% flee  ${visitsM}M visits/yr</span>
+      </div>
+      <div class="cb-track"><div class="cb-fill" style="width:${Math.min(100, flee/35*100)}%;background:${col}"></div></div>
+    </div>`;
+  });
+}
+
+function updateInsights() {
+  const flees = SQ.filter(s=>s.runs_from).length;
+  const indif = SQ.filter(s=>s.indifferent).length;
+  const appr = SQ.filter(s=>s.approaches).length;
+  const forage = SQ.filter(s=>s.foraging).length;
+  const pct = v => (v/SQ.length*100).toFixed(1) + '%';
+  
+  const fleeEl = document.getElementById('ins-flee');
+  const indifEl = document.getElementById('ins-indif');
+  const apprEl = document.getElementById('ins-appr');
+  const forageEl = document.getElementById('ins-forage');
+  const southEl = document.getElementById('ins-south');
+
+  if(fleeEl) fleeEl.textContent = pct(flees);
+  if(indifEl) indifEl.textContent = pct(indif);
+  if(apprEl) apprEl.textContent = pct(appr);
+  if(forageEl) forageEl.textContent = pct(forage);
+  
+  const south = SQ.filter(s=>s.lat < 40.775);
+  const north = SQ.filter(s=>s.lat > 40.790);
+  const southFlee = south.filter(s=>s.runs_from).length / south.length;
+  const northFlee = north.filter(s=>s.runs_from).length / north.length;
+  const ratio = (southFlee / northFlee).toFixed(1);
+  if(southEl) southEl.textContent = ratio + '×';
+}
+
+loadData();
+</script>
+</body>
+</html>
