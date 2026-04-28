@@ -1,5 +1,6 @@
 import L from 'leaflet';
 import { TILE, ZMAP } from './constants';
+import { ZONE_IMAGES } from './landmarks';
 
 export function heatColor(val) {
   const stops = [
@@ -27,10 +28,27 @@ export function buildZoneLayer(ZONE_DATA, INTENSITY) {
       return { fillColor: f, fillOpacity: o, color: bd, weight: 1, opacity: .45 };
     },
     onEachFeature(feat, layer) {
-      const name = ZMAP[parseInt(feat.properties.zone)] || 'Unknown';
+      const zoneId = parseInt(feat.properties.zone);
+      const name = ZMAP[zoneId] || 'Unknown';
       const mi = INTENSITY.find(v => v.Name === name);
       const val = mi ? (mi['Visits/Acre'] || 0) : 0;
-      layer.bindTooltip(`<strong>${name}</strong><br>${val.toLocaleString()} visits/acre/yr`);
+      const img = ZONE_IMAGES[zoneId];
+      
+      let tooltipContent = `<div class="map-tooltip">
+        <strong>${name}</strong>
+        ${val.toLocaleString()} visits/acre/yr`;
+      
+      if (img) {
+        tooltipContent += `<div class="tooltip-img" style="background-image: url(${img})"></div>`;
+      }
+      
+      tooltipContent += `</div>`;
+      
+      layer.bindTooltip(tooltipContent, { 
+        sticky: false, 
+        direction: 'auto',
+        className: 'custom-tooltip' 
+      });
     },
   });
 }
