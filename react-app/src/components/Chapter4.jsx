@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Chart from 'chart.js/auto';
-import { mkMap, buildZoneLayer, buildSqLayer } from '../mapUtils';
-import { NC, SC, CF, BEHS, BC, BL, NORTH_C, SOUTH_C, TOOLTIP_STYLE } from '../constants';
+import { mkMap, buildZoneLayer, buildDetailedSqLayer, buildHexbinLayer } from '../mapUtils';
+import { NC, SC, CF, BEHS, BC, BL, NORTH_C, SOUTH_C, ZOOM, TOOLTIP_STYLE } from '../constants';
 import { pct, colorFn } from '../utils';
 
 export default function Chapter4({ data }) {
@@ -13,7 +13,7 @@ export default function Chapter4({ data }) {
   const barRef = useRef(null);
   const ratioRef = useRef(null);
   const chartsRef = useRef({});
-  const [compareBeh, setCompareBeh] = useState('all');
+  const [compareBeh, setCompareBeh] = useState('runs_from');
   const [northBadge, setNorthBadge] = useState('—');
   const [southBadge, setSouthBadge] = useState('—');
   const [northStats, setNorthStats] = useState([]);
@@ -22,12 +22,12 @@ export default function Chapter4({ data }) {
 
   useEffect(() => {
     if (northMapEl.current && !northMapRef.current) {
-      northMapRef.current = mkMap(northMapEl.current, NORTH_C, 14, false);
-      buildZoneLayer(data.ZONE_DATA, data.INTENSITY).addTo(northMapRef.current);
+      northMapRef.current = mkMap(northMapEl.current, NORTH_C, ZOOM, false);
+      buildZoneLayer(data.ZONE_DATA, data.INTENSITY, false).addTo(northMapRef.current);
     }
     if (southMapEl.current && !southMapRef.current) {
-      southMapRef.current = mkMap(southMapEl.current, SOUTH_C, 14, false);
-      buildZoneLayer(data.ZONE_DATA, data.INTENSITY).addTo(southMapRef.current);
+      southMapRef.current = mkMap(southMapEl.current, SOUTH_C, ZOOM, false);
+      buildZoneLayer(data.ZONE_DATA, data.INTENSITY, false).addTo(southMapRef.current);
     }
     setTimeout(() => {
       northMapRef.current?.invalidateSize();
@@ -56,16 +56,24 @@ export default function Chapter4({ data }) {
   }, []);
 
   function updateCompareMaps(beh) {
-    const ff = beh === 'all' ? () => true : s => !!s[beh];
-    const cf = beh === 'all' ? colorFn : () => BC[beh];
+    const ff = s => !!s[beh];
+    const cf = () => BC[beh];
     const nm = northMapRef.current;
     const sm = southMapRef.current;
     if (!nm || !sm) return;
 
-    if (nm._sqLayer) nm._sqLayer.remove();
-    if (sm._sqLayer) sm._sqLayer.remove();
-    nm._sqLayer = buildSqLayer(NSQ.filter(ff), () => true, cf, 4); nm._sqLayer.addTo(nm);
-    sm._sqLayer = buildSqLayer(SSQ.filter(ff), () => true, cf, 4); sm._sqLayer.addTo(sm);
+    // Remove existing behavior layers (hexbins)
+    if (nm._behLayer) nm._behLayer.remove();
+    if (sm._behLayer) sm._behLayer.remove();
+    
+    // Show hexbins for the selected behavior
+    const label = (BL[beh] || 'sightings').toLowerCase();
+    const forcedMax = data.BEH_MAXES[beh];
+    nm._behLayer = buildHexbinLayer(NSQ, ff, BC[beh], data.HECTARE_DATA, true, label, forcedMax);
+    sm._behLayer = buildHexbinLayer(SSQ, ff, BC[beh], data.HECTARE_DATA, true, label, forcedMax);
+    
+    nm._behLayer.addTo(nm);
+    sm._behLayer.addTo(sm);
 
     setNorthBadge(NSQ.length.toLocaleString() + ' sightings');
     setSouthBadge(SSQ.length.toLocaleString() + ' sightings');
@@ -91,10 +99,16 @@ export default function Chapter4({ data }) {
       options: {
         responsive: true, maintainAspectRatio: false,
         animation: { duration: 900, easing: 'easeOutQuart', delay: ctx => ctx.dataIndex * 45 },
-        plugins: { legend: { display: false }, tooltip: { ...TOOLTIP_STYLE, callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}%` } } },
+        plugins: { 
+          legend: { display: false }, 
+          tooltip: { 
+            ...TOOLTIP_STYLE, 
+            callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}% of local sightings` } 
+          } 
+        },
         scales: {
           x: { grid: { display: false }, ticks: { font: { family: CF, size: 10 } } },
-          y: { grid: { color: 'rgba(43,29,14,.06)' }, ticks: { font: { family: CF, size: 10 }, callback: v => v + '%' }, title: { display: true, text: '% of squirrels', font: { size: 10, family: CF } } },
+          y: { grid: { color: 'rgba(43,29,14,.06)' }, ticks: { font: { family: CF, size: 10 }, callback: v => v + '%' }, title: { display: true, text: '% of sightings (normalized)', font: { size: 10, family: CF } } },
         },
       },
     });
@@ -116,7 +130,7 @@ export default function Chapter4({ data }) {
     });
   }
 
-  const filterOptions = [['all', 'All', '#7A4A22'], ...Object.entries(BL).map(([k, v]) => [k, v, BC[k]])];
+  const filterOptions = Object.entries(BL).map(([k, v]) => [k, v, BC[k]]);
 
   return (
     <>

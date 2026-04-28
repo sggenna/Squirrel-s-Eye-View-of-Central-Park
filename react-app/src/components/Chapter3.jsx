@@ -24,9 +24,15 @@ export default function Chapter3({ data }) {
       options: {
         indexAxis: 'y', responsive: true, maintainAspectRatio: false,
         animation: { duration: 900, easing: 'easeOutQuart', delay: ctx => ctx.dataIndex * 55 },
-        plugins: { legend: { display: false }, tooltip: { ...TOOLTIP_STYLE, callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.x.toFixed(1)}%` } } },
+        plugins: { 
+          legend: { display: false }, 
+          tooltip: { 
+            ...TOOLTIP_STYLE, 
+            callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.x.toFixed(1)}% of local sightings` } 
+          } 
+        },
         scales: {
-          x: { grid: { color: 'rgba(43,29,14,.06)' }, ticks: { font: { family: CF, size: 10 }, callback: v => v + '%' } },
+          x: { grid: { color: 'rgba(43,29,14,.06)' }, ticks: { font: { family: CF, size: 10 }, callback: v => v + '%' }, title: { display: true, text: '% of sightings (normalized)', font: { size: 10, family: CF } } },
           y: { grid: { display: false }, ticks: { font: { size: 11 } } },
         },
       },
@@ -105,8 +111,8 @@ export default function Chapter3({ data }) {
         <div className="chart-card reveal">
           <div className="cc-head">
             <div className="cc-eyebrow">The Behavioral Divide</div>
-            <div className="cc-title">South Park minus North Park (percentage points)</div>
-            <div className="cc-sub">Positive = more common in the high-traffic south. Negative = more common in the quiet north.</div>
+            <div class="cc-title">Normalized Difference (South % − North %)</div>
+            <div class="cc-sub">Shows which behaviors are disproportionately common in each region, accounting for the total sighting count.</div>
           </div>
           <div className="chart-canvas-wrap" style={{ height: 'clamp(220px,28vh,280px)' }}>
             <canvas ref={divergeRef} />

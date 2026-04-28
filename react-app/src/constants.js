@@ -1,6 +1,7 @@
 export const RAW_BASE = 'https://raw.githubusercontent.com/sggenna/Squirrel-s-Eye-View-of-Central-Park/main/data/';
 export const TILE = 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png';
 export const CENTER = [40.7826, -73.9656];
+export const ZOOM = 14;
 export const SPLIT = 40.785;
 export const NORTH_C = [40.793, -73.960];
 export const SOUTH_C = [40.771, -73.972];

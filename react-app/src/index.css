@@ -339,6 +339,51 @@ footer b { display: block; font-family: "Playfair Display", serif; font-style: i
   color: rgba(240,232,213,0.8);
 }
 
+/* Sighting Popups */
+.custom-popup .leaflet-popup-content-wrapper {
+  background: var(--paper) !important;
+  color: var(--ink) !important;
+  border-radius: 8px !important;
+  padding: 0 !important;
+  border: 1px solid var(--line) !important;
+}
+.custom-popup .leaflet-popup-tip {
+  background: var(--paper) !important;
+}
+.pop {
+  padding: 12px 16px;
+  min-width: 180px;
+}
+.pop-name {
+  font-family: "Playfair Display", serif;
+  font-weight: 600;
+  font-style: italic;
+  font-size: 15px;
+  margin-bottom: 10px;
+  color: var(--acorn);
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 6px;
+}
+.pop-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 11px;
+  margin: 4px 0;
+  color: rgba(240, 232, 213, 0.9); /* Brightened from ink-s */
+}
+.pop-row span:first-child {
+  font-family: "IBM Plex Mono", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.8;
+  color: var(--paper-e); /* Use a distinct secondary color */
+}
+.pop-row span:last-child {
+  font-weight: 500;
+  text-align: right;
+}
+
 /* ── UTILS ────────────────────────────────────────────── */
 .reveal { opacity: 0; transform: translateY(20px); transition: opacity .65s ease, transform .65s ease; }
 .reveal.vis { opacity: 1; transform: translateY(0); }

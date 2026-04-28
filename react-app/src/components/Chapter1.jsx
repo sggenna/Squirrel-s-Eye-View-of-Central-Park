@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { mkMap, buildZoneLayer } from '../mapUtils';
-import { CENTER } from '../constants';
+import { CENTER, ZOOM } from '../constants';
 
 const VIEWS = [
-  { c: CENTER,            z: 13 },
-  { c: [40.768, -73.974], z: 14 },
-  { c: CENTER,            z: 13 },
-  { c: [40.794, -73.961], z: 14 },
+  { c: CENTER,            z: ZOOM },
+  { c: [40.768, -73.974], z: ZOOM + 1 },
+  { c: CENTER,            z: ZOOM },
+  { c: [40.794, -73.961], z: ZOOM + 1 },
 ];
 const TAGS = [
   'All park zones · human foot traffic intensity',
@@ -23,8 +23,8 @@ export default function Chapter1({ data }) {
 
   useEffect(() => {
     if (!mapElRef.current || mapRef.current) return;
-    const map = mkMap(mapElRef.current, CENTER, 13, false);
-    buildZoneLayer(data.ZONE_DATA, data.INTENSITY).addTo(map);
+    const map = mkMap(mapElRef.current, CENTER, ZOOM, false);
+    buildZoneLayer(data.ZONE_DATA, data.INTENSITY, true).addTo(map);
     mapRef.current = map;
     setTimeout(() => map.invalidateSize(), 200);
     return () => { map.remove(); mapRef.current = null; };

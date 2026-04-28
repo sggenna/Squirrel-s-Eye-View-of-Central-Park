@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
-import { mkMap, buildZoneLayer, buildSqLayer } from '../mapUtils';
-import { CENTER, BC } from '../constants';
+import { mkMap, buildZoneLayer, buildDetailedSqLayer, buildHexbinLayer } from '../mapUtils';
+import { CENTER, ZOOM, BC } from '../constants';
 import { colorFn } from '../utils';
 
 const TAGS = [
-  'All 3,023 sightings · colored by behavior',
-  'Approach sightings highlighted · south concentration',
-  'Flee sightings highlighted · north concentration',
-  'All behaviors · full behavioral spectrum',
+  '3,023 Individual Sightings · Full Census Data',
+  'Behavior Density · Flees humans',
+  'Behavior Density · Indifferent to humans',
+  'Behavior Density · Approaches humans',
+  'Behavior Density · Eating behavior',
+  'Behavior Density · Alarm calls (Kuks)',
 ];
 
 export default function Chapter2({ data }) {
@@ -19,14 +21,19 @@ export default function Chapter2({ data }) {
 
   useEffect(() => {
     if (!mapElRef.current || mapRef.current) return;
-    const map = mkMap(mapElRef.current, CENTER, 13, false);
-    buildZoneLayer(data.ZONE_DATA, data.INTENSITY).addTo(map);
+    const map = mkMap(mapElRef.current, CENTER, ZOOM, false);
+
     const layers = {
-      all: buildSqLayer(data.SQ, () => true, colorFn, 4),
-      appr: buildSqLayer(data.SQ, s => s.approaches, () => BC.approaches, 7),
-      flees: buildSqLayer(data.SQ, s => s.runs_from, () => BC.runs_from, 7),
+      all: buildDetailedSqLayer(data.SQ, () => true, colorFn, 3),
+      
+      // Only Hexbin layers for behavioral steps with per-behavior scaling
+      flees: buildHexbinLayer(data.SQ, s => s.runs_from, BC.runs_from, data.HECTARE_DATA, true, 'fleeing squirrels', data.BEH_MAXES.runs_from),
+      indifferent: buildHexbinLayer(data.SQ, s => s.indifferent, BC.indifferent, data.HECTARE_DATA, true, 'indifferent squirrels', data.BEH_MAXES.indifferent),
+      approaches: buildHexbinLayer(data.SQ, s => s.approaches, BC.approaches, data.HECTARE_DATA, true, 'approaching squirrels', data.BEH_MAXES.approaches),
+      eating: buildHexbinLayer(data.SQ, s => s.eating, BC.eating, data.HECTARE_DATA, true, 'eating squirrels', data.BEH_MAXES.eating),
+      kuks: buildHexbinLayer(data.SQ, s => s.kuks, BC.kuks, data.HECTARE_DATA, true, 'vocalizing squirrels', data.BEH_MAXES.kuks),
     };
-    layers.all.addTo(map);
+    
     layersRef.current = layers;
     mapRef.current = map;
     setTimeout(() => map.invalidateSize(), 200);
@@ -45,11 +52,18 @@ export default function Chapter2({ data }) {
           curStep = step;
           setTag(TAGS[step] ?? TAGS[0]);
           const map = mapRef.current;
-          const { all, appr, flees } = layersRef.current;
-          Object.values(layersRef.current).forEach(l => l.remove());
-          if (step === 0 || step === 3) { all?.addTo(map); map?.flyTo(CENTER, 13, { duration: 1 }); }
-          else if (step === 1) { all?.addTo(map); appr?.addTo(map); map?.flyTo([40.772, -73.972], 14, { duration: 1.1 }); }
-          else { all?.addTo(map); flees?.addTo(map); map?.flyTo([40.793, -73.963], 14, { duration: 1.1 }); }
+          const LRS = layersRef.current;
+          
+          Object.values(LRS).forEach(l => l.remove());
+          
+          if (step === 0) LRS.all?.addTo(map);
+          else if (step === 1) LRS.flees?.addTo(map);
+          else if (step === 2) LRS.indifferent?.addTo(map);
+          else if (step === 3) LRS.approaches?.addTo(map);
+          else if (step === 4) LRS.eating?.addTo(map);
+          else if (step === 5) LRS.kuks?.addTo(map);
+          
+          map?.flyTo(CENTER, ZOOM, { duration: 1 });
         }
       });
     }, { rootMargin: '-30% 0px -30% 0px' });
@@ -64,42 +78,58 @@ export default function Chapter2({ data }) {
         <div className="map-box" ref={mapElRef} />
         <div className="map-footer">
           <div className="map-legend">
-            <div className="leg-row"><div className="leg-dot" style={{ background: '#c94c3a' }} />Flees</div>
-            <div className="leg-row"><div className="leg-dot" style={{ background: '#2d7a4f' }} />Approaches</div>
-            <div className="leg-row"><div className="leg-dot" style={{ background: '#2b5fa0' }} />Indifferent</div>
-            <div className="leg-row"><div className="leg-dot" style={{ background: '#b86a12' }} />Foraging</div>
-            <div className="leg-row">
-              <div style={{ width: 16, height: 6, borderRadius: 2, background: 'linear-gradient(to right,#78b87a,#e8a92a,#8b0000)', flexShrink: 0 }} />
-              Human traffic
-            </div>
+            <div className="leg-row"><div className="leg-dot" style={{ background: '#555555' }} />Individual sighting</div>
+            <div style={{ margin: '8px 0', borderTop: '1px solid var(--line)', opacity: 0.5 }}></div>
+            <div className="leg-row"><div className="leg-dot" style={{ background: BC.runs_from }} />Flee density</div>
+            <div className="leg-row"><div className="leg-dot" style={{ background: BC.approaches }} />Approach density</div>
+            <div className="leg-row"><div className="leg-dot" style={{ background: BC.indifferent }} />Indifferent density</div>
+            <div className="leg-row"><div className="leg-dot" style={{ background: BC.eating }} />Eating density</div>
+            <div className="leg-row"><div className="leg-dot" style={{ background: BC.kuks }} />Alarm call density</div>
           </div>
-          <div className="map-src">2018 NYC Squirrel Census · CPC 2009</div>
+          <div className="map-src">2018 NYC Squirrel Census · Hexbins by Hectare</div>
         </div>
       </div>
       <div className="steps-col" ref={stepsRef}>
         <div className="step active" data-step="0">
           <div className="eyebrow">Chapter 2 · Squirrel Geography</div>
-          <h3>3,023 squirrels, <em>one October</em>.</h3>
-          <p>Volunteer spotters covered every hectare of the park over 10 days. Unlike humans, squirrel sightings distribute relatively evenly — but their behavior varies sharply across the same gradient.</p>
-          <div className="stat-row"><div className="stat-n">3,023</div><div className="stat-l">Sightings across 10 October survey days</div></div>
+          <h3>The individual <em>sightings</em>.</h3>
+          <p>Every point on this map represents a single squirrel encounter. Unlike humans, squirrels are much more evenly distributed across the park. Click on any point to see the specific data associated with that sighting, including fur color and observed behaviors.</p>
+          <div className="stat-row"><div className="stat-n">3,023</div><div className="stat-l">Total unique sightings mapped</div></div>
         </div>
+        
         <div className="step" data-step="1">
-          <div className="eyebrow">The Approach Zone</div>
-          <h3>Southern squirrels <em>approach humans</em>.</h3>
-          <p>In the high-traffic southern zones, squirrels have been desensitized — and often actively trained by handfeeding. The approach rate in the south is 4× higher than in the quiet north.</p>
-          <div className="stat-row"><div className="stat-n">4×</div><div className="stat-l">More likely to approach in high-traffic southern zones</div></div>
-        </div>
-        <div className="step" data-step="2">
           <div className="eyebrow">The Flight Zone</div>
-          <h3>Northern squirrels <em>flee the scene</em>.</h3>
-          <p>In low-traffic northern zones — North Woods, Harlem Meer — squirrels treat humans as genuine threats. The flee rate in the north is significantly higher than the park-wide average.</p>
-          <blockquote className="pull">"The squirrel is the same animal. But the behavioral profile is shaped entirely by how many humans it has encountered." <cite>— NYC Squirrel Census field notes</cite></blockquote>
+          <h3>Where they <em>flee</em>.</h3>
+          <p>Flight behavior is an indicator of wildness. The map show hectares with the highest concentration of squirrels that ran away from humans. Notice how this behavior is most common in the most natural and less human dense areas of the park, indicating that the squirrels here are less habituated to humans.</p>
+          <div className="stat-row"><div className="stat-n">639</div><div className="stat-l">Squirrels observed fleeing humans</div></div>
         </div>
+
+        <div className="step" data-step="2">
+          <div className="eyebrow">The Middle Ground</div>
+          <h3>True <em>indifference</em>.</h3>
+          <p>Indifference is the most common behavior observed, and is especially common is the areas where humans are present but not intrusive.</p>
+          <div className="stat-row"><div className="stat-n">1,454</div><div className="stat-l">Squirrels indifferent to human presence</div></div>
+        </div>
+
         <div className="step" data-step="3">
-          <div className="eyebrow">The Full Picture</div>
-          <h3>All behaviors, <em>all at once</em>.</h3>
-          <p>With all behavioral categories shown simultaneously, the spatial patterning becomes clear. The human intensity gradient is a near-perfect predictor of squirrel behavioral response.</p>
-          <div className="stat-row"><div className="stat-n">48%</div><div className="stat-l">Of squirrels simply indifferent to human presence</div></div>
+          <div className="eyebrow">The Urbanized Profile</div>
+          <h3>The <em>approachers</em>.</h3>
+          <p>Active approach is the rarest behavior and is heavily concentrated in the high-traffic areas of the park. These squirrels have learned to associate humans with food rewards, and thus approach them more often.</p>
+          <div className="stat-row"><div className="stat-n">178</div><div className="stat-l">Squirrels actively approaching humans</div></div>
+        </div>
+
+        <div className="step" data-step="4">
+          <div className="eyebrow">Resource Usage</div>
+          <h3>Eating <em>habits</em>.</h3>
+          <p>Beyond human interaction, where do squirrels actually consume their food? Squirrels tend to eat most commonly in the human dense areas of the park, again showing that many squirrel rely on humans for their food.</p>
+          <div className="stat-row"><div className="stat-n">772</div><div className="stat-l">Squirrels seen eating during the census</div></div>
+        </div>
+
+        <div className="step" data-step="5">
+          <div className="eyebrow">The Alarm</div>
+          <h3>Kuks and <em>vocalizations</em>.</h3>
+          <p>The "Kuk" is a sharp alarm call. High concentrations of alarm calls often point to areas with more predators or perceived threats in the environment. This alarms are more commonly heard in the more natural areas of the parks, where the squirrels act closer to how they would in the wild. </p>
+          <div className="stat-row"><div className="stat-n">102</div><div className="stat-l">Instances of kuk vocalizations recorded</div></div>
         </div>
       </div>
     </div>

@@ -28,37 +28,82 @@ export default function App() {
   useEffect(() => {
     async function loadAll() {
       try {
-        setProgress(5); setLoadMsg('Loading zone boundaries…');
-        const [zR, , intR, sqR] = await Promise.all([
+        setProgress(5); setLoadMsg('Loading map data…');
+        const [zR, , intR, sqR, hR] = await Promise.all([
           fetch(RAW_BASE + 'zoneboundries.geojson'),
           fetch(RAW_BASE + 'volume_of_use_by_area.csv'),
           fetch(RAW_BASE + 'intensity_of_use_by_area.csv'),
           fetch(RAW_BASE + 'Squirrel_Data.csv'),
+          fetch(RAW_BASE + 'hectares.geojson'),
         ]);
         const ZONE_DATA = await zR.json();
+        const HECTARE_DATA = await hR.json();
+        
+        // Point in polygon for grid_id
+        const isInside = (point, vs) => {
+          const x = point[0], y = point[1];
+          let inside = false;
+          for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+            const xi = vs[i][0], yi = vs[i][1];
+            const xj = vs[j][0], yj = vs[j][1];
+            if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) inside = !inside;
+          }
+          return inside;
+        };
+
         setProgress(30); setLoadMsg('Parsing visitor data…');
         const INTENSITY = Papa.parse(await intR.text(), { header: true, dynamicTyping: true, skipEmptyLines: true }).data;
         setProgress(55); setLoadMsg('Parsing squirrel census…');
         const b = v => v === true || v === 'true' || v === 'TRUE';
         const SQ = Papa.parse(await sqR.text(), { header: true, dynamicTyping: true, skipEmptyLines: true }).data
           .filter(r => r.X && r.Y)
-          .map(r => ({
-            lat: r.Y, lng: r.X,
-            color: (r['Primary Fur Color'] || 'U')[0],
-            shift: r.Shift,
-            runs_from: b(r['Runs from']),
-            approaches: b(r.Approaches),
-            indifferent: b(r.Indifferent),
-            foraging: b(r.Foraging),
-            eating: b(r.Eating),
-            climbing: b(r.Climbing),
-            running: b(r.Running),
-            kuks: b(r.Kuks),
-          }));
+          .map(r => {
+            let grid_id = null;
+            for (const feat of HECTARE_DATA.features) {
+              if (isInside([r.X, r.Y], feat.properties.poly[0])) {
+                grid_id = feat.properties.grid_id;
+                break;
+              }
+            }
+            return {
+              lat: r.Y, lng: r.X,
+              grid_id,
+              hectare: r.Hectare,
+              color: (r['Primary Fur Color'] || 'U')[0],
+              age: r.Age,
+              shift: r.Shift,
+              runs_from: b(r['Runs from']),
+              approaches: b(r.Approaches),
+              indifferent: b(r.Indifferent),
+              foraging: b(r.Foraging),
+              eating: b(r.Eating),
+              climbing: b(r.Climbing),
+              running: b(r.Running),
+              kuks: b(r.Kuks),
+            };
+          });
         const NSQ = SQ.filter(s => s.lat > SPLIT);
         const SSQ = SQ.filter(s => s.lat <= SPLIT);
+
+        // Calculate per-behavior max sightings per hectare for consistent scaling
+        const BEH_MAXES = {};
+        const behKeys = ['runs_from', 'approaches', 'indifferent', 'foraging', 'eating', 'climbing', 'running', 'kuks'];
+        
+        behKeys.forEach(key => {
+          const counts = {};
+          SQ.forEach(s => {
+            if (s[key] && s.grid_id) counts[s.grid_id] = (counts[s.grid_id] || 0) + 1;
+          });
+          BEH_MAXES[key] = Math.max(...Object.values(counts), 1);
+        });
+
+        // Also keep a global max for "all sightings"
+        const allCounts = {};
+        SQ.forEach(s => { if (s.grid_id) allCounts[s.grid_id] = (allCounts[s.grid_id] || 0) + 1; });
+        const MAX_HECTARE_COUNT = Math.max(...Object.values(allCounts), 1);
+
         setProgress(80); setLoadMsg('Drawing maps…');
-        setData({ SQ, NSQ, SSQ, INTENSITY, ZONE_DATA });
+        setData({ SQ, NSQ, SSQ, INTENSITY, ZONE_DATA, HECTARE_DATA, MAX_HECTARE_COUNT, BEH_MAXES });
         setProgress(100);
         setTimeout(() => setLoaded(true), 350);
       } catch (e) {
