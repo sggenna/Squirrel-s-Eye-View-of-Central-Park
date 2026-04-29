@@ -86,6 +86,10 @@ export default function Chapter3({ data }) {
     const NR = BEHS.map(b => pct(NSQ, b.key));
     const SR = BEHS.map(b => pct(SSQ, b.key));
     const shorts = BEHS.map(b => b.short);
+    const mobile = window.innerWidth < 768;
+    const tickSz = mobile ? 8 : 10;
+    const rot = mobile ? 45 : 0;
+    const yTitle = mobile ? '' : '% of sightings (normalized)';
 
     chartsRef.current.bar?.destroy();
     chartsRef.current.bar = new Chart(barRef.current, {
@@ -105,8 +109,8 @@ export default function Chapter3({ data }) {
           }
         },
         scales: {
-          x: { grid: { display: false }, ticks: { font: { family: CF, size: 10 } } },
-          y: { grid: { color: 'rgba(43,29,14,.06)' }, ticks: { font: { family: CF, size: 10 }, callback: v => v + '%' }, title: { display: true, text: '% of sightings (normalized)', font: { size: 10, family: CF } } },
+          x: { grid: { display: false }, ticks: { font: { family: CF, size: tickSz }, maxRotation: rot, minRotation: rot } },
+          y: { grid: { color: 'rgba(43,29,14,.06)' }, ticks: { font: { family: CF, size: tickSz }, callback: v => v + '%' }, title: { display: !mobile, text: yTitle, font: { size: 10, family: CF } } },
         },
       },
     });
@@ -121,8 +125,8 @@ export default function Chapter3({ data }) {
         animation: { duration: 1000, easing: 'easeOutElastic', delay: ctx => ctx.dataIndex * 55 },
         plugins: { legend: { display: false }, tooltip: { ...TOOLTIP_STYLE, callbacks: { label: ctx => { const v = ctx.parsed.y; if (!v) return ' n/a'; return v > 1 ? ` ${v.toFixed(1)}× more in south` : ` ${(1 / v).toFixed(1)}× more in north`; } } } },
         scales: {
-          x: { grid: { display: false }, ticks: { font: { family: CF, size: 10 } } },
-          y: { grid: { color: 'rgba(43,29,14,.06)' }, ticks: { font: { family: CF, size: 10 }, callback: v => v + '×' }, title: { display: true, text: 'Ratio (1 = equal)', font: { size: 10, family: CF } }, min: 0 },
+          x: { grid: { display: false }, ticks: { font: { family: CF, size: tickSz }, maxRotation: rot, minRotation: rot } },
+          y: { grid: { color: 'rgba(43,29,14,.06)' }, ticks: { font: { family: CF, size: tickSz }, callback: v => v + '×' }, title: { display: !mobile, text: 'Ratio (1 = equal)', font: { size: 10, family: CF } }, min: 0 },
         },
       },
     });
@@ -162,7 +166,7 @@ export default function Chapter3({ data }) {
           <div className="compare-hdr reveal">
             <div>
               <h5>The core finding</h5>
-              <h3>Same species, same park — different behavior.</h3>
+              <h3>Same species, same park but different behavior</h3>
               <p>The south's high-traffic zones have produced a socialized, food-conditioned squirrel. The north's quiet zones have not. Filter the maps by behavior to see the divide.</p>
             </div>
             <div>

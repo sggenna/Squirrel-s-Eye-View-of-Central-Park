@@ -1,4 +1,4 @@
-import SquirrelSvg from './SquirrelSvg';
+import squirrelImg from '../squirrels.svg';
 
 export default function HeroSection() {
   return (
@@ -7,7 +7,7 @@ export default function HeroSection() {
         <div className="hero-kicker">NYC Squirrel Census 2018</div>
         <h1>Squirrel&rsquo;s <em>Eye View</em> of Central Park</h1>
         <p className="dek">
-          How 3,023 squirrels and 22 million humans navigate the same 843 acres — and what
+          How 3,023 squirrels and 22 million humans navigate the same 843 acres and what
           their behavior reveals about each other.
         </p>
         <div className="byline">
@@ -17,7 +17,7 @@ export default function HeroSection() {
         </div>
       </div>
       <div className="hero-viz">
-        <SquirrelSvg suffix="hero" />
+        <img src={squirrelImg} alt="Squirrel" />
       </div>
       <div className="scroll-cue">
         <div className="scroll-line" />

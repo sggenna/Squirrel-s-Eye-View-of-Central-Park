@@ -27,6 +27,7 @@ export default function Chapter5({ data }) {
     if (!mapElRef.current || mapRef.current) return;
     const map = mkMap(mapElRef.current, CENTER, ZOOM, true);
     mapRef.current = map;
+    setTimeout(() => map.invalidateSize(), 100);
     return () => { map.remove(); mapRef.current = null; };
   }, [data]);
 
@@ -164,7 +165,7 @@ export default function Chapter5({ data }) {
               <div className="tsw" /> Zone details
             </div>
           </div>
-          <div>
+          <div className="explore-map-wrap">
             <div id="explore-map" ref={mapElRef} />
           </div>
           <div className="epanel right">

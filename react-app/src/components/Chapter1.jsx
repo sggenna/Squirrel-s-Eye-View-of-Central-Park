@@ -70,25 +70,25 @@ export default function Chapter1({ data }) {
         <div className="step active" data-step="0">
           <div className="eyebrow">Chapter 1 · Human Geography</div>
           <h3>A park divided by <em>footfall</em>.</h3>
-          <p>Central Park hosts 22 million visitors a year — but they don't distribute evenly. The CPC Visitor Survey reveals stark intensity gradients driven by transit access, landmarks, and hotel proximity.</p>
+          <p>Central Park hosts 22 million visitors a year but they don't distribute evenly. The CPC Visitor Survey reveals stark intensity gradients driven by transit access, landmarks, and hotel proximity.</p>
           <p className="hint-txt">Hover over zones to see representative landmarks.</p>
           <div className="stat-row"><div className="stat-n">22M</div><div className="stat-l">Annual visitors to Central Park</div></div>
         </div>
         <div className="step" data-step="1">
           <div className="eyebrow">The Southern Gravity</div>
           <h3>You arrive from the <em>south</em>.</h3>
-          <p>The Wollman Rink, the Zoo, and Bethesda Terrace receive over 500,000 visits per acre per year — the highest density in the park. The landmarks in these southern zones dictate the flow of the millions who enter from the city grid.</p>
-          <div className="stat-row"><div className="stat-n">58%</div><div className="stat-l">Of visits enter south of 72nd Street</div></div>
+          <p>The Wollman Rink, the Zoo, and Bethesda Terrace receive over 500,000 visits per acre per year which is the highest density in the park. The landmarks in these southern zones dictate the flow of the millions who enter from the city grid.</p>
+          <div className="stat-row"><div className="stat-n">58%</div><div className="stat-l">Of visits enter south of 86th Street</div></div>
         </div>
         <div className="step" data-step="2">
           <div className="eyebrow">The Gradient</div>
           <h3>Foot traffic <em>fades northward</em>.</h3>
-          <p>Moving north of 72nd Street, intensity drops. While zones containing Strawberry Fields or the Met Museum draw steady crowds, the density begins to thin as visitors move further from the primary southern hubs.</p>
+          <p>Moving north of 86th Street, intensity drops. While zones containing Strawberry Fields or the Met Museum draw steady crowds, the density begins to thin as visitors move further from the primary southern hubs.</p>
           <blockquote className="pull">"The southern third of the park accounts for a majority of all visits, while northern zones remain relatively quiet." <cite>— CPC Visitor Survey, 2009</cite></blockquote>
         </div>
         <div className="step" data-step="3">
           <div className="eyebrow">The Quiet North</div>
-          <h3>Above 86th — <em>a different world</em>.</h3>
+          <h3>Above 86th... <em>a different world</em>.</h3>
           <p>With fewer high-density attractions to anchor them, the northern reaches like the North Woods and Great Hill remain tranquil sanctuaries. Here, the park feels less like a tourist destination and more like a local woodland.</p>
           <div className="stat-row"><div className="stat-n">4×</div><div className="stat-l">Fewer visitors per acre above 86th Street vs southern zones</div></div>
         </div>
