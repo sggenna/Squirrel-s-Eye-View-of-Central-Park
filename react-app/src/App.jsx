@@ -10,7 +10,6 @@ import HeroSection from './components/HeroSection';
 import Chapter1 from './components/Chapter1';
 import Chapter2 from './components/Chapter2';
 import Chapter3 from './components/Chapter3';
-import Chapter4 from './components/Chapter4';
 import Chapter5 from './components/Chapter5';
 import Footer from './components/Footer';
 
@@ -117,18 +116,25 @@ export default function App() {
   useEffect(() => {
     if (!data) return;
 
-    const chObs = new IntersectionObserver(entries => {
-      entries.forEach(e => {
-        if (e.isIntersecting) {
-          const ch = CHAPTERS.find(c => c.id === e.target.id);
-          if (ch) setChapter(ch);
+    let ticking = false;
+    function updateChapter() {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const threshold = window.innerHeight * 0.15;
+        let active = CHAPTERS[0];
+        for (const c of CHAPTERS) {
+          const el = document.getElementById(c.id);
+          if (!el) continue;
+          if (el.getBoundingClientRect().top <= threshold) active = c;
+          else break;
         }
+        setChapter(active);
+        ticking = false;
       });
-    }, { rootMargin: '-5% 0px -85% 0px' });
-    CHAPTERS.forEach(c => {
-      const el = document.getElementById(c.id);
-      if (el) chObs.observe(el);
-    });
+    }
+    window.addEventListener('scroll', updateChapter, { passive: true });
+    updateChapter();
 
     const heroObs = new IntersectionObserver(entries => {
       entries.forEach(e => setBannerVisible(!e.isIntersecting));
@@ -141,7 +147,11 @@ export default function App() {
     }, { threshold: .1 });
     document.querySelectorAll('.reveal').forEach(el => revObs.observe(el));
 
-    return () => { chObs.disconnect(); heroObs.disconnect(); revObs.disconnect(); };
+    return () => {
+      window.removeEventListener('scroll', updateChapter);
+      heroObs.disconnect();
+      revObs.disconnect();
+    };
   }, [data]);
 
   return (
@@ -158,7 +168,6 @@ export default function App() {
           <div id="ch2" />
           <Chapter2 data={data} />
           <Chapter3 data={data} />
-          <Chapter4 data={data} />
           <Chapter5 data={data} />
           <Footer />
         </>

@@ -60,9 +60,8 @@ export const BEHS = [
 export const CHAPTERS = [
   { id: 'ch1', num: '01', title: 'How you use <em>Central Park</em>' },
   { id: 'ch2', num: '02', title: 'How squirrels use <em>the same space</em>' },
-  { id: 'ch3', num: '03', title: 'Eight behaviors, <em>one census</em>' },
-  { id: 'ch4', num: '04', title: 'North vs. South — <em>two different parks</em>' },
-  { id: 'ch5', num: '05', title: 'Explore <em>for yourself</em>' },
+  { id: 'ch3', num: '03', title: 'Behavior shifts — <em>north vs. south</em>' },
+  { id: 'ch4', num: '04', title: 'Explore <em>for yourself</em>' },
 ];
 
 export const TOOLTIP_STYLE = {

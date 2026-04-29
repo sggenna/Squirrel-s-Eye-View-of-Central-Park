@@ -10,9 +10,8 @@ export default function TopBar() {
       <nav>
         <a href="#ch1">Humans</a>
         <a href="#ch2">Squirrels</a>
-        <a href="#ch3">Behaviors</a>
-        <a href="#ch4">N vs S</a>
-        <a href="#ch5">Explore</a>
+        <a href="#ch3">N vs S</a>
+        <a href="#ch4">Explore</a>
       </nav>
     </div>
   );

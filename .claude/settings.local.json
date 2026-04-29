@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /Users/cynthiajin/squirrel-project log --oneline --all -- index.html index1.html)"
+    ]
+  }
+}

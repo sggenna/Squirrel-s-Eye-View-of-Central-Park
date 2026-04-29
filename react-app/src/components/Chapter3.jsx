@@ -1,65 +1,142 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Chart from 'chart.js/auto';
-import { NC, SC, CF, BEHS, TOOLTIP_STYLE, BL, BC } from '../constants';
+import { mkMap, buildZoneLayer, buildHexbinLayer } from '../mapUtils';
+import { NC, SC, CF, BEHS, BC, BL, NORTH_C, SOUTH_C, ZOOM, TOOLTIP_STYLE } from '../constants';
 import { pct } from '../utils';
 
 export default function Chapter3({ data }) {
   const { NSQ, SSQ, SQ } = data;
+  const northMapEl = useRef(null);
+  const southMapEl = useRef(null);
+  const northMapRef = useRef(null);
+  const southMapRef = useRef(null);
   const barRef = useRef(null);
-  const divergeRef = useRef(null);
-  const ratioRef = useRef(null);
+  const ratioChartRef = useRef(null);
+  const ratioCardsRef = useRef(null);
+  const chartsRef = useRef({});
+  const [compareBeh, setCompareBeh] = useState('runs_from');
+  const [northBadge, setNorthBadge] = useState('—');
+  const [southBadge, setSouthBadge] = useState('—');
+  const [northStats, setNorthStats] = useState([]);
+  const [southStats, setSouthStats] = useState([]);
   const sectionRef = useRef(null);
 
   useEffect(() => {
+    if (northMapEl.current && !northMapRef.current) {
+      northMapRef.current = mkMap(northMapEl.current, NORTH_C, ZOOM, false);
+      buildZoneLayer(data.ZONE_DATA, data.INTENSITY, false).addTo(northMapRef.current);
+    }
+    if (southMapEl.current && !southMapRef.current) {
+      southMapRef.current = mkMap(southMapEl.current, SOUTH_C, ZOOM, false);
+      buildZoneLayer(data.ZONE_DATA, data.INTENSITY, false).addTo(southMapRef.current);
+    }
+    setTimeout(() => {
+      northMapRef.current?.invalidateSize();
+      southMapRef.current?.invalidateSize();
+      buildCharts();
+      buildRatioCards();
+    }, 300);
+    return () => {
+      northMapRef.current?.remove(); northMapRef.current = null;
+      southMapRef.current?.remove(); southMapRef.current = null;
+      chartsRef.current.bar?.destroy();
+      chartsRef.current.ratio?.destroy();
+    };
+  }, [data]);
+
+  useEffect(() => {
+    updateCompareMaps(compareBeh);
+  }, [compareBeh, data]);
+
+  useEffect(() => {
+    if (!sectionRef.current) return;
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('vis'); });
+    }, { threshold: .1 });
+    sectionRef.current.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+    return () => obs.disconnect();
+  }, []);
+
+  function updateCompareMaps(beh) {
+    const ff = s => !!s[beh];
+    const nm = northMapRef.current;
+    const sm = southMapRef.current;
+    if (!nm || !sm) return;
+
+    if (nm._behLayer) nm._behLayer.remove();
+    if (sm._behLayer) sm._behLayer.remove();
+
+    const label = (BL[beh] || 'sightings').toLowerCase();
+    const forcedMax = data.BEH_MAXES[beh];
+    nm._behLayer = buildHexbinLayer(NSQ, ff, BC[beh], data.HECTARE_DATA, true, label, forcedMax);
+    sm._behLayer = buildHexbinLayer(SSQ, ff, BC[beh], data.HECTARE_DATA, true, label, forcedMax);
+
+    nm._behLayer.addTo(nm);
+    sm._behLayer.addTo(sm);
+
+    setNorthBadge(NSQ.length.toLocaleString() + ' sightings');
+    setSouthBadge(SSQ.length.toLocaleString() + ' sightings');
+
+    const behLabel = BL[beh] || beh;
+    setNorthStats([{ k: beh, l: behLabel, v: pct(NSQ, beh).toFixed(1) }]);
+    setSouthStats([{ k: beh, l: behLabel, v: pct(SSQ, beh).toFixed(1) }]);
+  }
+
+  function buildCharts() {
     const NR = BEHS.map(b => pct(NSQ, b.key));
     const SR = BEHS.map(b => pct(SSQ, b.key));
-    const labs = BEHS.map(b => b.label);
+    const shorts = BEHS.map(b => b.short);
 
-    const bar = new Chart(barRef.current, {
+    chartsRef.current.bar?.destroy();
+    chartsRef.current.bar = new Chart(barRef.current, {
       type: 'bar',
-      data: { labels: labs, datasets: [
-        { label: 'North Park', data: NR, backgroundColor: NC + 'cc', borderColor: NC, borderWidth: 1, borderRadius: 3 },
-        { label: 'South Park', data: SR, backgroundColor: SC + 'cc', borderColor: SC, borderWidth: 1, borderRadius: 3 },
+      data: { labels: shorts, datasets: [
+        { label: 'North', data: NR, backgroundColor: NC + 'cc', borderColor: NC, borderWidth: 1, borderRadius: 3 },
+        { label: 'South', data: SR, backgroundColor: SC + 'cc', borderColor: SC, borderWidth: 1, borderRadius: 3 },
       ]},
       options: {
-        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-        animation: { duration: 900, easing: 'easeOutQuart', delay: ctx => ctx.dataIndex * 55 },
-        plugins: { 
-          legend: { display: false }, 
-          tooltip: { 
-            ...TOOLTIP_STYLE, 
-            callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.x.toFixed(1)}% of local sightings` } 
-          } 
+        responsive: true, maintainAspectRatio: false,
+        animation: { duration: 900, easing: 'easeOutQuart', delay: ctx => ctx.dataIndex * 45 },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            ...TOOLTIP_STYLE,
+            callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}% of local sightings` }
+          }
         },
         scales: {
-          x: { grid: { color: 'rgba(43,29,14,.06)' }, ticks: { font: { family: CF, size: 10 }, callback: v => v + '%' }, title: { display: true, text: '% of sightings (normalized)', font: { size: 10, family: CF } } },
-          y: { grid: { display: false }, ticks: { font: { size: 11 } } },
+          x: { grid: { display: false }, ticks: { font: { family: CF, size: 10 } } },
+          y: { grid: { color: 'rgba(43,29,14,.06)' }, ticks: { font: { family: CF, size: 10 }, callback: v => v + '%' }, title: { display: true, text: '% of sightings (normalized)', font: { size: 10, family: CF } } },
         },
       },
     });
 
-    const diffs = BEHS.map((b, i) => +(SR[i] - NR[i]).toFixed(1));
-    const diverge = new Chart(divergeRef.current, {
+    const ratios = BEHS.map((_, i) => { const n = NR[i], s = SR[i]; return n < 0.5 ? null : +(s / n).toFixed(2); });
+    chartsRef.current.ratio?.destroy();
+    chartsRef.current.ratio = new Chart(ratioChartRef.current, {
       type: 'bar',
-      data: { labels: labs, datasets: [{ data: diffs, backgroundColor: diffs.map(d => d > 0 ? SC + 'dd' : NC + 'dd'), borderColor: diffs.map(d => d > 0 ? SC : NC), borderWidth: 1, borderRadius: 3 }] },
+      data: { labels: shorts, datasets: [{ data: ratios, backgroundColor: ratios.map(r => r === null ? '#ccc' : r > 1 ? SC + 'cc' : NC + 'cc'), borderColor: ratios.map(r => r === null ? '#ccc' : r > 1 ? SC : NC), borderWidth: 1, borderRadius: 3 }] },
       options: {
-        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-        animation: { duration: 1000, easing: 'easeOutElastic', delay: ctx => ctx.dataIndex * 75 },
-        plugins: { legend: { display: false }, tooltip: { ...TOOLTIP_STYLE, callbacks: { label: ctx => { const v = ctx.parsed.x; return ` ${v > 0 ? '+' : ''}${v.toFixed(1)} pp (${v > 0 ? 'more in south' : 'more in north'})`; } } } },
+        responsive: true, maintainAspectRatio: false,
+        animation: { duration: 1000, easing: 'easeOutElastic', delay: ctx => ctx.dataIndex * 55 },
+        plugins: { legend: { display: false }, tooltip: { ...TOOLTIP_STYLE, callbacks: { label: ctx => { const v = ctx.parsed.y; if (!v) return ' n/a'; return v > 1 ? ` ${v.toFixed(1)}× more in south` : ` ${(1 / v).toFixed(1)}× more in north`; } } } },
         scales: {
-          x: { grid: { color: 'rgba(43,29,14,.06)' }, ticks: { font: { family: CF, size: 10 }, callback: v => (v > 0 ? '+' : '') + v + ' pp' }, title: { display: true, text: 'Percentage point difference (south − north)', font: { size: 10, family: CF } } },
-          y: { grid: { display: false }, ticks: { font: { size: 11 } } },
+          x: { grid: { display: false }, ticks: { font: { family: CF, size: 10 } } },
+          y: { grid: { color: 'rgba(43,29,14,.06)' }, ticks: { font: { family: CF, size: 10 }, callback: v => v + '×' }, title: { display: true, text: 'Ratio (1 = equal)', font: { size: 10, family: CF } }, min: 0 },
         },
       },
     });
+  }
 
+  function buildRatioCards() {
     const ratioItems = [
       { key: 'approaches', label: 'Approaches', desc: 'more likely to approach in south', icon: '🐿️', inv: false },
       { key: 'runs_from', label: 'Flees Humans', desc: 'higher flee rate in north vs south', icon: '💨', inv: true },
       { key: 'indifferent', label: 'Indifferent', desc: 'of all squirrels indifferent to humans', icon: '😐', all: true },
       { key: 'climbing', label: 'Climbing', desc: 'higher climbing rate in tree-dense north', icon: '🌲', inv: true },
     ];
-    const rg = ratioRef.current;
+    const rg = ratioCardsRef.current;
+    if (!rg) return;
     rg.innerHTML = '';
     ratioItems.forEach(s => {
       const nr = pct(NSQ, s.key), sr = pct(SSQ, s.key);
@@ -73,52 +150,89 @@ export default function Chapter3({ data }) {
         <div class="rc-bar-row"><div class="rc-bar-lbl" style="color:${SC}">South</div><div class="rc-track"><div class="rc-fill" style="width:${Math.min(100, sr * 2)}%;background:${SC}"></div></div><div class="rc-pct">${sr.toFixed(1)}%</div></div>`;
       rg.appendChild(card);
     });
+  }
 
-    return () => { bar.destroy(); diverge.destroy(); };
-  }, [data]);
-
-  useEffect(() => {
-    if (!sectionRef.current) return;
-    const obs = new IntersectionObserver(entries => {
-      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('vis'); });
-    }, { threshold: .1 });
-    sectionRef.current.querySelectorAll('.reveal').forEach(el => obs.observe(el));
-    return () => obs.disconnect();
-  }, []);
+  const filterOptions = Object.entries(BL).map(([k, v]) => [k, v, BC[k]]);
 
   return (
     <>
       <div id="ch3" />
-      <div className="chapter-mark reveal" ref={sectionRef}>
-        <div className="ch-num">3</div>
-        <div><div className="ch-label">Behavioral Analysis</div><h2>Eight behaviors, <em>one census</em></h2></div>
-      </div>
-      <div className="charts-section">
-        <div className="chart-card reveal">
-          <div className="cc-head">
-            <div className="cc-eyebrow">North vs. South</div>
-            <div className="cc-title">Behavior rates by park zone</div>
-            <div className="cc-sub">Percentage of squirrels exhibiting each behavior, split by park zone. The gap between bars tells the story.</div>
-            <div className="cc-legend">
-              <div className="cc-leg"><div className="cc-dot" style={{ background: '#5A6A2A' }} />North Park</div>
-              <div className="cc-leg"><div className="cc-dot" style={{ background: '#A8421A' }} />South Park</div>
+      <div className="compare-section" ref={sectionRef}>
+        <div className="compare-inner">
+          <div className="compare-hdr reveal">
+            <div>
+              <h5>The core finding</h5>
+              <h3>Same species, same park — different behavior.</h3>
+              <p>The south's high-traffic zones have produced a socialized, food-conditioned squirrel. The north's quiet zones have not. Filter the maps by behavior to see the divide.</p>
+            </div>
+            <div>
+              <h5>Filter by behavior</h5>
+              <div className="beh-filters">
+                {filterOptions.map(([id, label, col]) => (
+                  <button
+                    key={id}
+                    className={'fpill' + (compareBeh === id ? ' on' : '')}
+                    onClick={() => setCompareBeh(id)}
+                  >
+                    <div className="fpill-dot" style={{ background: col }} />{label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
-          <div className="chart-canvas-wrap" style={{ height: 'clamp(240px,32vh,320px)' }}>
-            <canvas ref={barRef} />
+          <div className="compare-maps">
+            <div className="cmap">
+              <div className="cmap-hdr">
+                <span className="ctitle">🌲 North Park · above 72nd St</span>
+                <span className="cbadge">{northBadge}</span>
+              </div>
+              <div className="cmap-body" ref={northMapEl} />
+              <div className="cmap-stats">
+                {northStats.map(({ k, l, v }) => (
+                  <div className="cs" key={k}><div className="cs-val">{v}%</div><div className="cs-key">{l}</div></div>
+                ))}
+              </div>
+            </div>
+            <div className="cmap">
+              <div className="cmap-hdr">
+                <span className="ctitle">🏙 South Park · below 72nd St</span>
+                <span className="cbadge">{southBadge}</span>
+              </div>
+              <div className="cmap-body" ref={southMapEl} />
+              <div className="cmap-stats">
+                {southStats.map(({ k, l, v }) => (
+                  <div className="cs" key={k}><div className="cs-val">{v}%</div><div className="cs-key">{l}</div></div>
+                ))}
+              </div>
+            </div>
           </div>
+          <div className="compare-charts reveal">
+            <div className="chart-card">
+              <div className="cc-head">
+                <div className="cc-eyebrow">Full breakdown</div>
+                <div className="cc-title">All behaviors · North vs South</div>
+                <div className="cc-legend">
+                  <div className="cc-leg"><div className="cc-dot" style={{ background: '#5A6A2A' }} />North</div>
+                  <div className="cc-leg"><div className="cc-dot" style={{ background: '#A8421A' }} />South</div>
+                </div>
+              </div>
+              <div className="chart-canvas-wrap" style={{ height: 'clamp(200px,26vh,260px)' }}>
+                <canvas ref={barRef} />
+              </div>
+            </div>
+            <div className="chart-card">
+              <div className="cc-head">
+                <div className="cc-eyebrow">Relative likelihood</div>
+                <div className="cc-title">South ÷ North ratio</div>
+                <div className="cc-sub" style={{ fontSize: 11 }}>How many times more likely in south. &gt;1 = south-skewed.</div>
+              </div>
+              <div className="chart-canvas-wrap" style={{ height: 'clamp(200px,26vh,260px)' }}>
+                <canvas ref={ratioChartRef} />
+              </div>
+            </div>
+          </div>
+          <div className="ratio-grid reveal" ref={ratioCardsRef} />
         </div>
-        <div className="chart-card reveal">
-          <div className="cc-head">
-            <div className="cc-eyebrow">The Behavioral Divide</div>
-            <div class="cc-title">Normalized Difference (South % − North %)</div>
-            <div class="cc-sub">Shows which behaviors are disproportionately common in each region, accounting for the total sighting count.</div>
-          </div>
-          <div className="chart-canvas-wrap" style={{ height: 'clamp(220px,28vh,280px)' }}>
-            <canvas ref={divergeRef} />
-          </div>
-        </div>
-        <div className="ratio-grid reveal" ref={ratioRef} />
       </div>
     </>
   );

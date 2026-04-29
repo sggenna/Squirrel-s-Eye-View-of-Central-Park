@@ -209,7 +209,7 @@ body {
 .rc-pct { width: 32px; text-align: right; }
 
 /* ── COMPARE SECTION ──────────────────────────────────── */
-.compare-section { background: var(--paper-d); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 60px 0; }
+.compare-section { padding: 60px 0; }
 .compare-inner { max-width: 1200px; margin: 0 auto; padding: 0 60px; }
 .compare-hdr { display: grid; grid-template-columns: 1fr 1fr; gap: 50px; margin-bottom: 40px; padding-bottom: 24px; border-bottom: 1px solid var(--line); }
 .compare-hdr h5 { font-family: "IBM Plex Mono", monospace; font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--rust); margin-bottom: 7px; }
@@ -231,9 +231,8 @@ body {
 .cmap-hdr .ctitle { font-family: "IBM Plex Mono", monospace; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-s); }
 .cmap-hdr .cbadge { font-family: "IBM Plex Mono", monospace; font-size: 10px; padding: 3px 8px; background: var(--paper-e); color: var(--ink-m); }
 .cmap-body { height: clamp(220px,28vh,340px); }
-.cmap-stats { display: grid; grid-template-columns: repeat(3,1fr); border-top: 1px solid var(--line); }
-.cs { padding: 12px 14px; border-right: 1px solid var(--line); }
-.cs:last-child { border-right: none; }
+.cmap-stats { display: flex; justify-content: center; border-top: 1px solid var(--line); }
+.cs { padding: 12px 14px; text-align: center; }
 .cs-val { font-family: "Playfair Display", serif; font-size: 22px; font-weight: 600; color: var(--ink); }
 .cs-key { font-family: "IBM Plex Mono", monospace; font-size: 9px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-m); margin-top: 2px; }
 .compare-charts { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; }
