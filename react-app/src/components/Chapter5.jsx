@@ -114,10 +114,6 @@ export default function Chapter5({ data }) {
   return (
     <>
       <div id="ch4" />
-      <div className="chapter-mark reveal">
-        <div className="ch-num">4</div>
-        <div><div className="ch-label">Free Exploration</div><h2>Explore <em>for yourself</em></h2></div>
-      </div>
       <div className="explore-section" ref={revealRef}>
         <div className="explore-head reveal">
           <h2>Every sighting, <em>on the map</em>.</h2>

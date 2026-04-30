@@ -109,7 +109,7 @@ export default function Chapter3({ data }) {
           }
         },
         scales: {
-          x: { grid: { display: false }, ticks: { font: { family: CF, size: tickSz }, maxRotation: rot, minRotation: rot } },
+          x: { grid: { display: false }, ticks: { font: { family: CF, size: tickSz }, maxRotation: rot, minRotation: rot, autoSkip: false } },
           y: { grid: { color: 'rgba(43,29,14,.06)' }, ticks: { font: { family: CF, size: tickSz }, callback: v => v + '%' }, title: { display: !mobile, text: yTitle, font: { size: 10, family: CF } } },
         },
       },
@@ -125,7 +125,7 @@ export default function Chapter3({ data }) {
         animation: { duration: 1000, easing: 'easeOutElastic', delay: ctx => ctx.dataIndex * 55 },
         plugins: { legend: { display: false }, tooltip: { ...TOOLTIP_STYLE, callbacks: { label: ctx => { const v = ctx.parsed.y; if (!v) return ' n/a'; return v > 1 ? ` ${v.toFixed(1)}× more in south` : ` ${(1 / v).toFixed(1)}× more in north`; } } } },
         scales: {
-          x: { grid: { display: false }, ticks: { font: { family: CF, size: tickSz }, maxRotation: rot, minRotation: rot } },
+          x: { grid: { display: false }, ticks: { font: { family: CF, size: tickSz }, maxRotation: rot, minRotation: rot, autoSkip: false } },
           y: { grid: { color: 'rgba(43,29,14,.06)' }, ticks: { font: { family: CF, size: tickSz }, callback: v => v + '×' }, title: { display: !mobile, text: 'Ratio (1 = equal)', font: { size: 10, family: CF } }, min: 0 },
         },
       },
@@ -164,12 +164,38 @@ export default function Chapter3({ data }) {
       <div className="compare-section" ref={sectionRef}>
         <div className="compare-inner">
           <div className="compare-hdr reveal">
-            <div>
-              <h5>The core finding</h5>
-              <h3>Same species, same park but different behavior</h3>
-              <p>The south's high-traffic zones have produced a socialized, food-conditioned squirrel. The north's quiet zones have not. Filter the maps by behavior to see the divide.</p>
+            <h5>The core finding</h5>
+            <h3>Same species, same park but different behavior</h3>
+            <p>The south's high-traffic zones have produced a socialized, food-conditioned squirrel. The north's quiet zones have not. Filter the maps by behavior to see the divide.</p>
+          </div>
+          <div className="compare-body">
+            <div className="compare-maps">
+              <div className="cmap">
+                <div className="cmap-hdr">
+                  <span className="ctitle">🌲 North Park · above 72nd St</span>
+                  <span className="cbadge">{northBadge}</span>
+                </div>
+                <div className="cmap-body" ref={northMapEl} />
+                <div className="cmap-stats">
+                  {northStats.map(({ k, l, v }) => (
+                    <div className="cs" key={k}><div className="cs-val">{v}%</div><div className="cs-key">{l}</div></div>
+                  ))}
+                </div>
+              </div>
+              <div className="cmap">
+                <div className="cmap-hdr">
+                  <span className="ctitle">🏙 South Park · below 72nd St</span>
+                  <span className="cbadge">{southBadge}</span>
+                </div>
+                <div className="cmap-body" ref={southMapEl} />
+                <div className="cmap-stats">
+                  {southStats.map(({ k, l, v }) => (
+                    <div className="cs" key={k}><div className="cs-val">{v}%</div><div className="cs-key">{l}</div></div>
+                  ))}
+                </div>
+              </div>
             </div>
-            <div>
+            <aside className="compare-filters">
               <h5>Filter by behavior</h5>
               <div className="beh-filters">
                 {filterOptions.map(([id, label, col]) => (
@@ -182,33 +208,7 @@ export default function Chapter3({ data }) {
                   </button>
                 ))}
               </div>
-            </div>
-          </div>
-          <div className="compare-maps">
-            <div className="cmap">
-              <div className="cmap-hdr">
-                <span className="ctitle">🌲 North Park · above 72nd St</span>
-                <span className="cbadge">{northBadge}</span>
-              </div>
-              <div className="cmap-body" ref={northMapEl} />
-              <div className="cmap-stats">
-                {northStats.map(({ k, l, v }) => (
-                  <div className="cs" key={k}><div className="cs-val">{v}%</div><div className="cs-key">{l}</div></div>
-                ))}
-              </div>
-            </div>
-            <div className="cmap">
-              <div className="cmap-hdr">
-                <span className="ctitle">🏙 South Park · below 72nd St</span>
-                <span className="cbadge">{southBadge}</span>
-              </div>
-              <div className="cmap-body" ref={southMapEl} />
-              <div className="cmap-stats">
-                {southStats.map(({ k, l, v }) => (
-                  <div className="cs" key={k}><div className="cs-val">{v}%</div><div className="cs-key">{l}</div></div>
-                ))}
-              </div>
-            </div>
+            </aside>
           </div>
           <div className="compare-charts reveal">
             <div className="chart-card">

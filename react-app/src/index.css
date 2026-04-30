@@ -356,54 +356,12 @@ body {
   }
 }
 
-/* ── CHAPTER MARK ─────────────────────────────────────── */
-.chapter-mark {
-  max-width: 1100px;
-  margin: 80px auto 40px;
-  padding: 0 60px 24px;
-  display: grid;
-  grid-template-columns: 120px 1fr;
-  gap: 30px;
-  align-items: end;
-  border-bottom: 1px solid var(--line);
-}
-.ch-num {
-  font-family: "Playfair Display", serif;
-  font-size: 80px;
-  line-height: 0.9;
-  color: var(--acorn);
-  font-weight: 400;
-  font-style: italic;
-  opacity: 0.3;
-}
-.ch-label {
-  font-family: "IBM Plex Mono", monospace;
-  font-size: 10px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--ink-m);
-  margin-bottom: 8px;
-}
-.chapter-mark h2 {
-  font-family: "Playfair Display", serif;
-  font-size: clamp(28px, 3.2vw, 42px);
-  font-weight: 600;
-  line-height: 1;
-  letter-spacing: -0.01em;
-  color: var(--ink);
-}
-.chapter-mark h2 em {
-  font-style: italic;
-  color: var(--acorn);
-  font-weight: 400;
-}
-
 /* ── SCROLLY SECTION ──────────────────────────────────── */
 .scrolly {
   display: grid;
   grid-template-columns: 1fr 1fr;
   max-width: 1400px;
-  margin: 0 auto;
+  margin: 0 auto 80px;
 }
 .scrolly-map {
   position: sticky;
@@ -575,7 +533,7 @@ body {
 .charts-section {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 60px 60px 100px;
+  padding: 120px 60px;
 }
 .chart-card {
   background: var(--paper-d);
@@ -695,7 +653,7 @@ body {
 
 /* ── COMPARE SECTION ──────────────────────────────────── */
 .compare-section {
-  padding: 60px 0;
+  padding: 120px 0;
 }
 .compare-inner {
   max-width: 1200px;
@@ -703,14 +661,14 @@ body {
   padding: 0 60px;
 }
 .compare-hdr {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 50px;
-  margin-bottom: 40px;
+  margin: 0 auto 32px;
   padding-bottom: 24px;
   border-bottom: 1px solid var(--line);
+  max-width: 720px;
+  text-align: center;
 }
-.compare-hdr h5 {
+.compare-hdr h5,
+.compare-filters h5 {
   font-family: "IBM Plex Mono", monospace;
   font-size: 9px;
   letter-spacing: 0.14em;
@@ -732,8 +690,9 @@ body {
 }
 .beh-filters {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
   margin-top: 12px;
 }
 .fpill {
@@ -765,11 +724,21 @@ body {
   border-radius: 50%;
   flex-shrink: 0;
 }
+.compare-body {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 16px;
+  align-items: start;
+  margin-bottom: 24px;
+}
+.compare-filters {
+  position: sticky;
+  top: calc(var(--sticky-top) + 16px);
+}
 .compare-maps {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  margin-bottom: 24px;
+  grid-template-columns: 1fr;
+  gap: 16px;
 }
 .cmap {
   background: var(--paper-d);
@@ -797,7 +766,10 @@ body {
   color: var(--ink-m);
 }
 .cmap-body {
-  height: clamp(220px, 28vh, 340px);
+  /* Two stacked cards (body + ~100px chrome each, +16px gap) must fit within
+     100vh - sticky-top, with extra buffer for browser chrome / scrollbars. */
+  height: min(220px, calc((100vh - var(--sticky-top)) / 2 - 140px));
+  min-height: 120px;
 }
 .cmap-stats {
   display: flex;
@@ -830,7 +802,7 @@ body {
 
 /* ── EXPLORE SECTION ──────────────────────────────────── */
 .explore-section {
-  padding: 60px 0 60px;
+  padding: 120px 0;
 }
 .explore-head {
   max-width: 1200px;
@@ -1188,10 +1160,6 @@ footer b {
     padding-left: 40px;
     padding-right: 40px;
   }
-  .chapter-mark {
-    padding-left: 40px;
-    padding-right: 40px;
-  }
   .scrolly-map {
     padding-left: 40px;
     padding-right: 40px;
@@ -1289,16 +1257,6 @@ footer b {
     padding: 28px 20px;
   }
 
-  /* ── CHAPTER MARK ──────────────────────────────────────── */
-  .chapter-mark {
-    grid-template-columns: 1fr;
-    padding: 0 20px;
-    margin: 50px auto 30px;
-  }
-  .ch-num {
-    display: none;
-  }
-
   /* ── CHARTS (CH 3) ─────────────────────────────────────── */
   .charts-section {
     padding: 40px 20px 60px;
@@ -1315,10 +1273,13 @@ footer b {
     padding: 0 16px;
     overflow: hidden;
   }
+  .compare-body,
   .compare-maps,
-  .compare-hdr,
   .compare-charts {
     grid-template-columns: 1fr;
+  }
+  .compare-filters {
+    position: static;
   }
 
   /* ── RATIO GRID ────────────────────────────────────────── */
@@ -1353,8 +1314,5 @@ footer b {
   }
   .beh-filters {
     flex-wrap: wrap;
-  }
-  .compare-hdr {
-    grid-template-columns: 1fr;
   }
 }
