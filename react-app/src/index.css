@@ -513,6 +513,77 @@ body {
   padding-top: 16px;
   border-top: 1px solid var(--line);
 }
+.act-chart-wrap {
+  position: relative;
+  height: 220px;
+  margin: 20px 0 6px;
+  max-width: 440px;
+}
+.act-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 22px 0 14px;
+  max-width: 440px;
+}
+.act-chip {
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  background: transparent;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11px;
+  color: var(--ink-s);
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.act-chip:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+.act-chip.on {
+  background: var(--rust);
+  color: var(--paper);
+  border-color: var(--rust);
+}
+.gate-hint {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-m);
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--line);
+}
+.gate-hint.done {
+  color: var(--rust);
+  border-top-style: solid;
+  border-top-color: var(--rust);
+}
+@keyframes gate-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(2px); }
+}
+.gate-hint.shake {
+  animation: gate-shake 0.32s ease-in-out;
+  color: var(--rust);
+}
+.step-callout {
+  display: inline-block;
+  margin: -4px 0 14px;
+  padding: 6px 12px;
+  background: rgba(168, 66, 26, 0.1);
+  border-left: 2px solid var(--rust);
+  color: var(--rust);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  line-height: 1.5;
+}
 .stat-n {
   font-family: "Playfair Display", serif;
   font-size: 44px;
