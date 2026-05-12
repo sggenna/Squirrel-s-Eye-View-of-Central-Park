@@ -48,13 +48,13 @@ export const ZMAP = {
 
 export const BEHS = [
   { key: 'runs_from', label: 'Flees', short: 'Flees' },
-  { key: 'approaches', label: 'Approaches', short: 'Appr.' },
-  { key: 'indifferent', label: 'Indifferent', short: 'Indiff.' },
-  { key: 'foraging', label: 'Foraging', short: 'Forage' },
-  { key: 'eating', label: 'Eating', short: 'Eating' },
-  { key: 'running', label: 'Running', short: 'Run' },
-  { key: 'climbing', label: 'Climbing', short: 'Climb' },
   { key: 'kuks', label: 'Alarm calls', short: 'Alarm' },
+  { key: 'running', label: 'Running', short: 'Run' },
+  { key: 'foraging', label: 'Foraging', short: 'Forage' },
+  { key: 'climbing', label: 'Climbing', short: 'Climb' },
+  { key: 'indifferent', label: 'Indifferent', short: 'Indiff.' },
+  { key: 'eating', label: 'Eating', short: 'Eating' },
+  { key: 'approaches', label: 'Approaches', short: 'Appr.' },
 ];
 
 export const CHAPTERS = [

@@ -116,17 +116,51 @@ export default function Chapter3({ data }) {
     });
 
     const ratios = BEHS.map((_, i) => { const n = NR[i], s = SR[i]; return n < 0.5 ? null : +(s / n).toFixed(2); });
+    const signedRatios = ratios.map(r => {
+      if (r === null) return null;
+      if (Math.abs(r - 1) < 0.01) return 0;
+      return r < 1 ? +(1 / r - 1).toFixed(2) : +(-(r - 1)).toFixed(2);
+    });
+    const validRatios = signedRatios.filter(v => v !== null).map(v => Math.abs(v));
+    const maxAbsRatio = Math.max(0.25, ...(validRatios.length ? validRatios : [0]));
     chartsRef.current.ratio?.destroy();
     chartsRef.current.ratio = new Chart(ratioChartRef.current, {
       type: 'bar',
-      data: { labels: shorts, datasets: [{ data: ratios, backgroundColor: ratios.map(r => r === null ? '#ccc' : r > 1 ? SC + 'cc' : NC + 'cc'), borderColor: ratios.map(r => r === null ? '#ccc' : r > 1 ? SC : NC), borderWidth: 1, borderRadius: 3 }] },
+      data: { labels: shorts, datasets: [{ data: signedRatios, backgroundColor: signedRatios.map(v => v === null ? '#ccc' : v > 0 ? NC + 'cc' : SC + 'cc'), borderColor: signedRatios.map(v => v === null ? '#ccc' : v > 0 ? NC : SC), borderWidth: 1, borderRadius: 3 }] },
       options: {
         responsive: true, maintainAspectRatio: false,
         animation: { duration: 1000, easing: 'easeOutElastic', delay: ctx => ctx.dataIndex * 55 },
-        plugins: { legend: { display: false }, tooltip: { ...TOOLTIP_STYLE, callbacks: { label: ctx => { const v = ctx.parsed.y; if (!v) return ' n/a'; return v > 1 ? ` ${v.toFixed(1)}× more in south` : ` ${(1 / v).toFixed(1)}× more in north`; } } } },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            ...TOOLTIP_STYLE,
+            callbacks: {
+              label: ctx => {
+                const ratio = signedRatios[ctx.dataIndex];
+                if (ratio === null) return ' n/a';
+                if (Math.abs(ratio) < 0.01) return ' 1× (equal)';
+                const magnitude = (1 + Math.abs(ratio)).toFixed(1);
+                return ratio > 0 ? ` ${magnitude}× more in north` : ` ${magnitude}× more in south`;
+              }
+            }
+          }
+        },
         scales: {
           x: { grid: { display: false }, ticks: { font: { family: CF, size: tickSz }, maxRotation: rot, minRotation: rot, autoSkip: false } },
-          y: { grid: { color: 'rgba(43,29,14,.06)' }, ticks: { font: { family: CF, size: tickSz }, callback: v => v + '×' }, title: { display: !mobile, text: 'Ratio (1 = equal)', font: { size: 10, family: CF } }, min: 0 },
+          y: {
+            grid: { color: 'rgba(43,29,14,.06)' },
+            ticks: {
+              font: { family: CF, size: tickSz },
+              callback: v => {
+                if (Math.abs(v) < 0.001) return '1×';
+                const magnitude = (1 + Math.abs(v)).toFixed(1);
+                return v > 0 ? `${magnitude}×` : `${magnitude}×`;
+              }
+            },
+            title: { display: !mobile, text: 'Ratio (1 = equal)', font: { size: 10, family: CF } },
+            min: -maxAbsRatio,
+            max: maxAbsRatio,
+          },
         },
       },
     });
@@ -227,8 +261,8 @@ export default function Chapter3({ data }) {
             <div className="chart-card">
               <div className="cc-head">
                 <div className="cc-eyebrow">Relative likelihood</div>
-                <div className="cc-title">South ÷ North ratio</div>
-                <div className="cc-sub" style={{ fontSize: 11 }}>How many times more likely in south. &gt;1 = south-skewed.</div>
+                <div className="cc-title">North / South ratio</div>
+                <div className="cc-sub" style={{ fontSize: 11 }}>1× means equal. Values above it mean north is higher; values below it mean south is higher.</div>
               </div>
               <div className="chart-canvas-wrap" style={{ height: 'clamp(200px,26vh,260px)' }}>
                 <canvas ref={ratioChartRef} />
